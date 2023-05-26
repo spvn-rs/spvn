@@ -1,0 +1,18 @@
+[package]
+name = "spvn"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme = "README.md"
+license = "MIT"
+
+[lib]
+name = "spvn"
+
+[dependencies]
+spvn_lifespan = { path = "../spvn_lifespan" }
+spvn_py = { path = "../spvn_py" }

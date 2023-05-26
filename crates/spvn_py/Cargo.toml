@@ -1,0 +1,39 @@
+[package]
+name = "spvn_py"
+version = { workspace = true }
+publish = false
+edition = { workspace = true }
+rust-version = { workspace = true }
+
+[lib]
+
+[dependencies]
+spvn = { path = "../spvn" }
+pyo3 = {version = "0.18.3", features = ["extension-module"]}
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+pythonize = { version = "0.18.0" }
+pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }
+tokio = {version = "1.9", features = ["sync"]}
+async-trait = {version = "0.1.68"}
+simple_logger = "4.1.0"
+log = "0.4.17"
+clap = { version = "4.0", features = ["derive"] }
+
+
+[build]
+rustflags = [
+  "-C", "link-args=-Wl,-rpath,/Library/Developer/CommandLineTools/Library/Frameworks",
+]
+
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
+
+[target.aarch64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
