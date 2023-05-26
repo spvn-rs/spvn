@@ -1,14 +1,16 @@
 [package]
-name = "spvn_dev"
+name = "spvn_cfg"
 version = { workspace = true }
 publish = false
 edition = { workspace = true }
 rust-version = { workspace = true }
 
+[lib]
+
 [dependencies]
 spvn = { path = "../spvn" }
-spvn_cli = { path = "../spvn_cli" }
-spvn_cfg = { path = "../spvn_cfg" }
-
 simple_logger = { workspace = true }
 log = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+toml = { version = "0.7.4" }
+serde = { workspace = true }

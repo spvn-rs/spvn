@@ -13,6 +13,13 @@ doc = false
 
 [dependencies]
 spvn = { path = "../spvn" }
+spvn_cfg = { path = "../spvn_cfg" }
+spvn_caller = { path = "../spvn_caller"  }
+spvn_listen = { path = "../spvn_listen" }
+
 simple_logger = { workspace = true }
 log = { workspace = true }
-clap = { workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive", "env"] }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+colored = { version = "2.0.0" }

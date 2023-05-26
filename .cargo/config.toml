@@ -1,2 +1,16 @@
 [alias]
 dev = "run --package spvn_dev --bin spvn_dev"
+cli = "run --package spvn_cli --bin spvn"
+
+
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
+
+[target.aarch64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]

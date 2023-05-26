@@ -1,0 +1,12 @@
+[package]
+name = "spvn_listen"
+version = { workspace = true }
+publish = false
+edition = { workspace = true }
+rust-version = { workspace = true }
+
+[lib]
+
+[dependencies]
+tokio = { workspace = true, features = ["net", "sync"]}
+anyhow = { workspace = true }

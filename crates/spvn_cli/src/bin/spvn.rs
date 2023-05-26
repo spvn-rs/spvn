@@ -1,25 +1,22 @@
 use clap::Parser;
-use std::path::PathBuf;
-use log::Level;
+
+use colored::Colorize;
 use simple_logger::SimpleLogger;
+use spvn_cli::args::{Cmds, ExitStatus};
+use spvn_cli::run;
+use std::process::ExitCode;
 
-
-#[derive(Parser, Debug)]
-#[command(name = "spvn")]
-#[command(author = "Joshua A. <joshua.auchincloss@proton.me>")]
-#[command(version)]
-#[command(about = "ASGI Rust Bindings", long_about = None)]
-pub struct Cli {
-    #[arg(short, long, value_name = "FILE")]
-    pub target: String,
-
-    pub config: Option<PathBuf>,
-}
-
-
-fn main(){
+pub fn main() -> ExitCode {
     SimpleLogger::new().env().init().unwrap();
-
-    let cli = Cli::parse();
-    log::info!("{:#?}", cli);
+    let cmd = Cmds::parse();
+    match run(cmd) {
+        Ok(code) => code.into(),
+        Err(err) => {
+            #[allow(clippy::print_stderr)]
+            {
+                eprintln!("{}{} {err:?}", "error".red().bold(), ":".bold());
+            }
+            ExitStatus::Error.into()
+        }
+    }
 }

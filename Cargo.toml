@@ -12,7 +12,7 @@ documentation = "https://github.com/joshua-auchincloss/spvn"
 repository = "https://github.com/joshua-auchincloss/spvn"
 
 [workspace.dependencies]
-pyo3 = {version = "0.18.3", features = ["extension-module"]}
+pyo3 = {version = "0.18.3", features = ["auto-initialize", "extension-module"]}
 pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }
 
 serde = { version = "1.0", features = ["derive"] }
@@ -21,3 +21,4 @@ async-trait = {version = "0.1.68"}
 simple_logger = "4.1.0"
 clap = { version = "4.0", features = ["derive"] }
 log = "0.4.17"
+anyhow = { version = "1.0.71" }
