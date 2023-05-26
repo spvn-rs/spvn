@@ -779,10 +779,6 @@ dependencies = [
 [[package]]
 name = "spvn"
 version = "0.1.0"
-dependencies = [
- "spvn_lifespan",
- "spvn_py",
-]
 
 [[package]]
 name = "spvn_caller"

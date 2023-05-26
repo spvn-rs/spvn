@@ -3,6 +3,7 @@ members = ["crates/*"]
 
 
 [workspace.package]
+
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.69.0"
@@ -10,6 +11,8 @@ authors = ["Joshua A. <joshua.auchincloss@proton.me>"]
 homepage = "https://github.com/joshua-auchincloss/spvn"
 documentation = "https://github.com/joshua-auchincloss/spvn"
 repository = "https://github.com/joshua-auchincloss/spvn"
+description = "asgi rust bindings"
+
 
 [workspace.dependencies]
 pyo3 = {version = "0.18.3", features = ["auto-initialize", "extension-module"]}
@@ -22,3 +25,6 @@ simple_logger = "4.1.0"
 clap = { version = "4.0", features = ["derive"] }
 log = "0.4.17"
 anyhow = { version = "1.0.71" }
+
+[profile.release]
+lto = "fat"

@@ -17,8 +17,7 @@ spvn = "spvn:main"
 
 [tool.maturin]
 python-source = "python"
-bindings = "bin"
-manifest-path = "crates/spvn_cli/Cargo.toml"
+manifest-path = "crates/spvn_py/Cargo.toml"
 module-name = "spvn"
 strip = true
 exclude = [

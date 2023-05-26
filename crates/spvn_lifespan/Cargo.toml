@@ -1,9 +1,15 @@
 [package]
 name = "spvn_lifespan"
-version = { workspace = true }
-publish = false
-edition = { workspace = true }
-rust-version = { workspace = true }
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+documentation.workspace = true
+description.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme = "README.md"
+license = "MIT"
 
 [lib]
 
