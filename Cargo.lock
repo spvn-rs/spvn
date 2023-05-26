@@ -654,6 +654,48 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 name = "spvn"
 version = "0.1.0"
 dependencies = [
+ "spvn_lifespan",
+ "spvn_py",
+]
+
+[[package]]
+name = "spvn_cli"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "log",
+ "simple_logger",
+ "spvn",
+]
+
+[[package]]
+name = "spvn_dev"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "simple_logger",
+ "spvn",
+ "spvn_cli",
+]
+
+[[package]]
+name = "spvn_lifespan"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "log",
+ "pyo3",
+ "pyo3-asyncio",
+ "pythonize",
+ "serde",
+ "simple_logger",
+ "tokio",
+]
+
+[[package]]
+name = "spvn_py"
+version = "0.1.0"
+dependencies = [
  "async-trait",
  "clap",
  "log",

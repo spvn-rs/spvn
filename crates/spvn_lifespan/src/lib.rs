@@ -1,3 +1,5 @@
+use pyo3::prelude::*;
+
 use async_trait::async_trait;
 use std::sync::Arc;
 // use tokio::sync::Barrier;
@@ -39,3 +41,14 @@ pub fn new() -> LifespanState {
     state.initialize();
     return state
 }
+
+
+
+
+// fn serve(py: &PyModule) {
+//     let rt = tokio::runtime::Runtime::new().unwrap();
+//     let parsed: cli::cmd::Cli = cli::cmd::Cli::parse();
+//     let fut = spawn(parsed);
+//     rt.spawn(fut);
+//     log::info!("started.");
+// }

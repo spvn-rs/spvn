@@ -3,9 +3,6 @@ use pythonize::pythonize;
 use serde::{Deserialize, Serialize};
 use simple_logger::SimpleLogger;
 use std::vec;
-mod cli;
-mod lifespan;
-use clap::Parser;
 
 fn get_default_asgi() -> ASGIVersions {
     ASGIVersions {
@@ -20,9 +17,7 @@ struct ASGIVersions {
     version: String,
 }
 
-#[pyclass]
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-#[pyo3(text_signature = "ASGIScope(type)")]
 pub struct ASGIScope {
     _type: String,
     asgi: ASGIVersions,
@@ -77,23 +72,6 @@ fn initialize(py: Python) -> PyResult<&PyAny> {
     })
 }
 
-async fn spawn(cli: cli::cmd::Cli) {
-    let spvn = lifespan::impls::new();
-    log::info!("spawning");
-    log::info!("{:#?}", cli);
-    log::info!("{:#?}", spvn);
-    // time::sleep(time::Duration::from_secs(2)).await;
-    log::info!("done")
-}
-
-#[pyfunction]
-fn serve(_py: Python) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let parsed: cli::cmd::Cli = cli::cmd::Cli::parse();
-    let fut = spawn(parsed);
-    rt.spawn(fut);
-    log::info!("started.");
-}
 
 #[pymodule]
 fn spvn(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
@@ -104,7 +82,6 @@ fn spvn(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     });
 
     m.add_function(wrap_pyfunction!(pop_scope, m)?)?;
-    m.add_function(wrap_pyfunction!(serve, m)?)?;
     m.add_function(wrap_pyfunction!(initialize, m)?)?;
     Ok(())
 }

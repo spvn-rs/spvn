@@ -1,0 +1,13 @@
+[package]
+name = "spvn_dev"
+version = { workspace = true }
+publish = false
+edition = { workspace = true }
+rust-version = { workspace = true }
+
+[dependencies]
+spvn = { path = "../spvn" }
+spvn_cli = { path = "../spvn_cli" }
+
+simple_logger = { workspace = true }
+log = { workspace = true }
