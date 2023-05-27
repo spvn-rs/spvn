@@ -2,6 +2,8 @@
 dev = "run --package spvn_dev --bin spvn_dev"
 cli = "run --package spvn_cli --bin spvn"
 
+test-caller = "cargo test --package spvn_calle"
+
 
 [target.x86_64-apple-darwin]
 rustflags = [

@@ -7,8 +7,13 @@ struct PyConfig {
 
 }
 
+
+
+
+
+
 #[pyfunction]
-fn bind(config: &PyConfig) {}
+fn bind(_config: &PyConfig) {}
 
 #[pymodule]
 fn spvn(_py: Python<'_>, m: &PyModule) -> PyResult<()> {

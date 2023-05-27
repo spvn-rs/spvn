@@ -1,0 +1,7 @@
+[package]
+name = "dynamic-import-test"
+
+
+
+[dependencies]
+spvn_caller = "0.0.1"

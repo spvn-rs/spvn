@@ -8,9 +8,15 @@ rust-version = { workspace = true }
 [lib]
 
 [dependencies]
-spvn = { path = "../spvn" }
-simple_logger = { workspace = true }
 log = { workspace = true }
-clap = { workspace = true, features = ["derive"] }
-toml = { version = "0.7.4" }
+toml = { workspace = true }
 serde = { workspace = true }
+cpython = { workspace = true, features = ["serde-convert"] }
+axum = { workspace = true, features = [] }
+axum-core = { workspace = true }
+hyper = { workspace = true, features = ["full"] }
+tracing = "0.1"
+async-trait = { workspace = true }
+http = { workspace = true }
+once_cell = { workspace = true }
+tower = { version = "0.4", features = ["make"] }

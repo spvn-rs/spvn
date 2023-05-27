@@ -2,10 +2,15 @@ use crate::args::ExitStatus;
 use anyhow::Result;
 use clap::Args;
 use core::clone::Clone;
+use std::{path::PathBuf, env};
+use cpython::Python;
+use spvn_caller::{
+    service::caller::{
+        Call, Caller
+    },
+};
+use spvn_caller::{PySpawn, Spawn, POOL};
 use spvn_listen::{spawn_socket, spawn_tcp};
-use std::path::PathBuf;
-
-use spvn_caller::resolve_import;
 
 #[derive(Debug, Args)]
 pub struct ServeArgs {
@@ -146,13 +151,14 @@ pub async fn spawn(config: &ServeArgs) -> Result<ExitStatus> {
     }
 
     let tgt: &str = arguments.target.as_str();
-    let import_result = resolve_import(tgt);
-    let caller = match import_result {
-        Ok(asgi_app) => asgi_app,
-        Err(_) => return Result::Ok(ExitStatus::Error),
-    };
 
+    env::set_var("SPVN_SRV_TARGET", tgt);
+    spvn_caller::PySpawn::spawn();
 
+    POOL.g
+
+    // // py.
+    // caller.call(py);
 
     // spawn_tcp( ).await;
     Result::Ok(ExitStatus::Success)

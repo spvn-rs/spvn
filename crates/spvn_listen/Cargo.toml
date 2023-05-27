@@ -16,3 +16,8 @@ license = "MIT"
 [dependencies]
 tokio = { workspace = true, features = ["net", "sync"]}
 anyhow = { workspace = true }
+hyper = { workspace = true, features = ["full"] }
+parking_lot = "0.12.1"
+tower = { workspace = true, features = ["make"] }
+axum = { workspace = true, features = [] }
+axum-core = { workspace = true }

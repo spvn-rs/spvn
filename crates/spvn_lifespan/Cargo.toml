@@ -14,12 +14,7 @@ license = "MIT"
 [lib]
 
 [dependencies]
-pythonize = { version = "0.18.0" }
-async-trait = {version = "0.1.68"}
-
-pyo3 = { workspace = true , features = ["extension-module"]}
-pyo3-asyncio = { workspace = true , features = ["attributes", "tokio-runtime"] }
-
+async-trait = { workspace = true}
 serde = { workspace = true , features = ["derive"] }
 tokio = { workspace = true , features = ["sync"]}
 simple_logger = { workspace = true }

@@ -11,4 +11,4 @@ crate-type = ["proc-macro"]
 [dependencies]
 simple_logger = { workspace = true }
 log = { workspace = true }
-colored = { version = "2.0.0" }
+colored = { workspace = true }

@@ -15,3 +15,13 @@ license = "MIT"
 name = "spvn"
 
 [dependencies]
+spvn_caller = {path = "../spvn_caller"}
+tokio-rustls = "0.23"
+tokio = { workspace = true, features = ["sync", "macros"] }
+rustls-pemfile = "0.3"
+hyper = { workspace = true, features = ["full"] }
+http = { workspace = true }
+futures = { version = "0.3.28" }
+tower = {workspace = true, features = ["make", "timeout"]}
+tower-layer = { version = "0.3.2" }
+tower-service = { version = "0.3.2" }

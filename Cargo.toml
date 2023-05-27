@@ -17,14 +17,23 @@ description = "asgi rust bindings"
 [workspace.dependencies]
 pyo3 = {version = "0.18.3", features = ["auto-initialize", "extension-module"]}
 pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }
-
+colored = { version = "2.0.0" }
 serde = { version = "1.0", features = ["derive"] }
-tokio = {version = "1.9", features = ["sync"]}
+tokio = {version = "1.9", features = ["sync", "rt"]}
 async-trait = {version = "0.1.68"}
 simple_logger = "4.1.0"
 clap = { version = "4.0", features = ["derive"] }
 log = "0.4.17"
 anyhow = { version = "1.0.71" }
+axum = { version = "0.6.18"}
+axum-core = { version = "0.3.4"}
+toml = { version = "0.7.4" }
+cpython = { version = "0.7", features = ["serde-convert"] }
+libc = { version = "0.2.144" }
+http = { version = "0.2.9" }
+once_cell = { version = "1.17.1" }
+hyper = { version = "0.14", features = ["full"] }
+tower = { version = "0.4", features = ["make"] }
 
 [profile.release]
 lto = "fat"

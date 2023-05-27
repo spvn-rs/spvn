@@ -1,18 +1,18 @@
+pub mod args;
+pub(crate) mod commands;
+
 use crate::args::{Cmds, Command, ExitStatus};
 use crate::commands::serve::{spawn, ServeArgs};
 use anyhow::Result;
 use colored::Colorize;
-pub mod args;
-pub(crate) mod commands;
+use tokio::runtime::Builder;
 
 pub fn serve(args: ServeArgs) -> () {
-    tokio::runtime::Builder::new_multi_thread()
+    Builder::new_multi_thread()
         .enable_all()
         .build()
         .unwrap()
-        .block_on(async {
-            spawn(&args).await
-        });
+        .block_on(async { spawn(&args).await });
 }
 
 pub fn run(Cmds { command }: Cmds) -> Result<ExitStatus> {

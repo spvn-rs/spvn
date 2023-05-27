@@ -9,6 +9,7 @@ activate:
 		. ./env/bin/activate
 .PHONY: link-actv
 link-actv: activate link
-
 run: 
 		target/debug/spvn
+changelog:
+		git-changelog -o CHANGELOG.md
