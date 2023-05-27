@@ -1,8 +1,6 @@
-
+use crate::commands::serve::ServeArgs;
 use clap::{command, Parser};
-use crate::commands::serve::{ServeArgs};
 use std::process::ExitCode;
-
 
 #[derive(Parser, Debug)]
 #[command(name = "spvn")]
@@ -10,10 +8,8 @@ use std::process::ExitCode;
 #[command(version)]
 #[command(about = "ASGI Rust Bindings", long_about = None)]
 pub struct Cmds {
-
     #[command(subcommand)]
     pub command: Command,
-
 }
 
 #[derive(Debug, clap::Subcommand)]

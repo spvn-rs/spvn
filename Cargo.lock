@@ -1069,7 +1069,6 @@ dependencies = [
  "futures",
  "http",
  "hyper",
- "rustls-pemfile",
  "spvn_caller",
  "tokio",
  "tokio-rustls",
@@ -1092,6 +1091,7 @@ dependencies = [
  "serde_json",
  "simple_logger",
  "spvn_cfg",
+ "spvn_serde",
  "syncpool",
  "tokio",
 ]
@@ -1108,7 +1108,10 @@ dependencies = [
  "hyper",
  "log",
  "once_cell",
+ "rustls-pemfile",
  "serde",
+ "spvn_serde",
+ "tokio-rustls",
  "toml",
  "tower",
  "tracing",
@@ -1189,6 +1192,15 @@ dependencies = [
  "serde_json",
  "simple_logger",
  "tokio",
+]
+
+[[package]]
+name = "spvn_serde"
+version = "0.1.0"
+dependencies = [
+ "cpython",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

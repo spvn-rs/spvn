@@ -3,59 +3,51 @@ use std::env;
 
 use crate::service::imports::resolve_import;
 use anyhow::Result;
-use async_trait::async_trait;
 use cpython::Python;
+use spvn_cfg::ASGIScope;
 
-use service::caller::{Caller, Call};
+use service::caller::{Call, Caller};
 use syncpool::prelude::*;
 
-pub static mut POOL: Option<SyncPool<PySpawn>> = None;
-
 pub struct PySpawn {
-    // py: Python,
-    caller: Caller,
+    pool: Option<SyncPool<Caller>>,
 }
 
-pub trait New {
-    fn new(tgt: &str) -> Self;
-}
-
-impl New for PySpawn {
-    fn new(tgt: &str) -> Self {
+impl PySpawn {
+    pub fn new() -> Self {
+        PySpawn { pool: None }
+    }
+    pub fn call(self, scope: ASGIScope) {
+        let gil = Python::acquire_gil();
+        self.pool
+            .expect("call before caller acquired")
+            .get()
+            .call(gil.python(), scope);
+    }
+    pub fn gen() -> Caller {
+        let target = env::var("SPVN_SRV_TARGET");
+        let tgt = match target {
+            Ok(st) => st,
+            Err(e) => panic!("lost env var at runtime {:#?}", e),
+        };
         let gil = Python::acquire_gil();
         let py = gil.python();
-        let module = resolve_import(py, tgt);
+        let module = resolve_import(py, tgt.as_str());
         let caller = match module {
             Ok(asgi_app) => asgi_app,
             Err(_) => panic!("panicked"),
         };
-        PySpawn { caller }
+        caller
     }
 }
 
 pub trait Spawn {
-    fn spawn();
-}
-
-impl Call for PySpawn {
-    fn call(self, py: Python) {
-        self.caller.call(py)
-    }
+    fn spawn(&mut self);
 }
 
 impl Spawn for PySpawn {
-    fn spawn() {
-        let gen = || {
-            let target = env::var("SPVN_SRV_TARGET");
-            let tgt = match target {
-                Ok(st) => st,
-                Err(e) => panic!("lost env var at runtime {:#?}", e),
-            };
-
-            PySpawn::new(tgt.as_str())
-        };
-        unsafe {
-            POOL.replace(SyncPool::with_builder_and_size(4, gen));
-        };
+    fn spawn(&mut self) {
+        self.pool
+            .replace(SyncPool::with_builder_and_size(4, PySpawn::gen));
     }
 }

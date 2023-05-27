@@ -1,4 +1,4 @@
-use axum::{ routing::get, Router};
+use axum::{routing::get, Router};
 use hyper::server::{
     accept::Accept,
     conn::{AddrIncoming, Http},

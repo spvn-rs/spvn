@@ -1,16 +1,8 @@
 use pyo3::prelude::*;
 use simple_logger::SimpleLogger;
 
-
 #[pyclass]
-struct PyConfig {
-
-}
-
-
-
-
-
+struct PyConfig {}
 
 #[pyfunction]
 fn bind(_config: &PyConfig) {}

@@ -1,4 +1,3 @@
-
 use async_trait::async_trait;
 use std::sync::Arc;
 // use tokio::sync::Barrier;
@@ -22,9 +21,7 @@ pub struct LifespanState {
 
 #[async_trait]
 impl Lifespan for LifespanState {
-    fn initialize(&mut self) {
-
-    }
+    fn initialize(&mut self) {}
     async fn handle_lifespan(&self) {}
     async fn wait_startup(&self) {}
     async fn wait_shutdown(&self) {}
@@ -33,16 +30,13 @@ impl Lifespan for LifespanState {
 }
 
 pub fn new() -> LifespanState {
-    let mut state = LifespanState{
+    let mut state = LifespanState {
         started: Arc::new(Mutex::new(false)),
         closed: Arc::new(Mutex::new(false)),
     };
     state.initialize();
-    return state
+    return state;
 }
-
-
-
 
 // fn serve(py: &PyModule) {
 //     let rt = tokio::runtime::Runtime::new().unwrap();

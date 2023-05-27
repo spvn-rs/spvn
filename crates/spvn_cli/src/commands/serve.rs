@@ -2,15 +2,11 @@ use crate::args::ExitStatus;
 use anyhow::Result;
 use clap::Args;
 use core::clone::Clone;
-use std::{path::PathBuf, env};
 use cpython::Python;
-use spvn_caller::{
-    service::caller::{
-        Call, Caller
-    },
-};
-use spvn_caller::{PySpawn, Spawn, POOL};
+use spvn_caller::service::caller::{Call, Caller};
+use spvn_caller::{PySpawn, Spawn};
 use spvn_listen::{spawn_socket, spawn_tcp};
+use std::{env, path::PathBuf};
 
 #[derive(Debug, Args)]
 pub struct ServeArgs {
@@ -153,9 +149,9 @@ pub async fn spawn(config: &ServeArgs) -> Result<ExitStatus> {
     let tgt: &str = arguments.target.as_str();
 
     env::set_var("SPVN_SRV_TARGET", tgt);
-    spvn_caller::PySpawn::spawn();
-
-    POOL.g
+    let mut spawn = spvn_caller::PySpawn::new();
+    spawn.spawn();
+    spawn.call(spvn_cfg::ASGIScope::mock());
 
     // // py.
     // caller.call(py);

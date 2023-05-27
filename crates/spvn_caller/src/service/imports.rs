@@ -1,7 +1,10 @@
 use core::result::Result::Ok;
-use cpython::{PyErr, PyString, Python};
-use cpython::{PyModule, PyObject};
-use libc::{c_char, c_void};
+use cpython::{PyDict, PyErr, PyString, Python};
+use cpython::{
+    PyModule, PyObject,
+    _detail::ffi::{PyObject as Py3FFIObj, PySys_GetObject},
+};
+use libc::c_void;
 use log::{error, info};
 
 use crate::service::caller;
@@ -13,8 +16,8 @@ use std::path::PathBuf;
 
 #[allow(improper_ctypes)]
 extern "C" {
-    fn PySys_GetObject(name: *const c_char) -> *mut PyObject;
-    fn PyList_Append(obj: *mut PyObject, obj2: cpython::PyString) -> c_void;
+    //     fn PySys_GetObject(name: *const c_char) -> *mut PyObject;
+    fn PyList_Append(obj: *mut Py3FFIObj, obj2: cpython::PyString) -> c_void;
 }
 
 pub enum ImportError {
@@ -62,6 +65,8 @@ pub fn resolve_import(py: Python, import_str: &str) -> anyhow::Result<caller::Ca
 
 // ** gets module from result - panics if the result is an err to trace the error back
 fn pymod_from_result_module(py: Python, result: Result<PyModule, PyErr>) -> PyModule {
+    #[cfg(debug_assertions)]
+    info!("matching module");
     let modu = match result {
         cpython::_detail::Result::Ok(pkg) => pkg,
         Err(err) => {
@@ -111,13 +116,15 @@ fn import(
 }
 
 fn init_module(py: Python, name: &str, path: &str) -> PyModule {
-    let pypath = PyString::new(py, path);
+    let py_pt = PyString::new(py, path);
     unsafe {
         let name = CString::new("path").unwrap();
         let path = PySys_GetObject(name.as_ptr());
         #[cfg(debug_assertions)]
-        info!("loaded pyobj {:#?}", path);
-        PyList_Append(path, pypath);
+        info!("loaded path {:#?}", path);
+        PyList_Append(path, py_pt);
+        #[cfg(debug_assertions)]
+        info!("append to path complete");
     }
     let result = PyModule::import(py, name);
     pymod_from_result_module(py, result)
