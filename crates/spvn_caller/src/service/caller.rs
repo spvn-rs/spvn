@@ -1,18 +1,8 @@
-use cpython::_detail::ffi::PyTypeObject;
-use cpython::{py_class, py_class_call_slot, py_fn, PyIterator, PyString};
-use cpython::{NoArgs, ObjectProtocol, PyNone, ToPyObject};
-use cpython::{
-    PyDict, PyList, PyModule, PyObject, PyResult, Python, PythonObjectDowncastError,
-    _detail::ffi,
-    _detail::ffi::{vectorcallfunc, PyAsyncMethods, Py_ssize_t},
-    _detail::from_owned_ptr_or_panic,
-    pyobject_newtype,
-};
+use cpython::py_fn;
+use cpython::{NoArgs, ObjectProtocol, PyNone};
+use cpython::{PyDict, PyObject, PyResult, Python, _detail::ffi::PyAsyncMethods};
 use log::info;
 use spvn_serde::ToPy;
-use std::io::Bytes;
-
-use cpython::PyClone;
 
 pub struct Awaitable(PyAsyncMethods);
 
@@ -53,9 +43,9 @@ impl<T: ToPy<PyDict>> Call<T> for Caller {
 
         // let args = PyTuple::new(py, &[]);
 
-        fn send(py: Python, a: PyDict) -> PyResult<PyNone> {
+        fn send(py: Python, scope: PyDict) -> PyResult<PyNone> {
             #[cfg(debug_assertions)]
-            info!("{:#?}", a.items(py));
+            info!("{:#?}", scope.items(py));
             // let res = Awaitable(PyAsyncMethods {
             //     am_await: fn(*mut ffi::PyObject) -> *mut ffi::PyObject {
 
@@ -83,7 +73,7 @@ impl<T: ToPy<PyDict>> Call<T> for Caller {
         let kwargs = PyDict::new(py);
 
         kwargs.set_item(py, "scope", scope.to(py));
-        kwargs.set_item(py, "send", py_fn!(py, send(a: PyDict)));
+        kwargs.set_item(py, "send", py_fn!(py, send(scope: PyDict)));
         kwargs.set_item(py, "receive", py_fn!(py, receive()));
 
         let result = self.app.call(py, NoArgs, Some(&kwargs));
@@ -133,6 +123,7 @@ impl<T: ToPy<PyDict>> Call<T> for Caller {
                 Some(obj) => Some(obj),
                 None => break,
             };
+
             n += 1;
 
             match py_result.unwrap() {

@@ -29,3 +29,6 @@ anyhow = { workspace = true }
 colored = { workspace = true}
 
 
+
+bytes = "1"
+

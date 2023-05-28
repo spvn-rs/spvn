@@ -2,7 +2,7 @@ pub mod service;
 use std::env;
 
 use crate::service::imports::resolve_import;
-use anyhow::Result;
+
 use cpython::Python;
 use spvn_cfg::ASGIScope;
 

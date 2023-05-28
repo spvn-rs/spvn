@@ -1,18 +1,5 @@
-use axum::{routing::get, Router};
-use hyper::server::{
-    accept::Accept,
-    conn::{AddrIncoming, Http},
-};
-use std::{
-    fs::File,
-    io::BufReader,
-    path::{Path, PathBuf},
-    pin::Pin,
-    sync::Arc,
-};
 use tokio::net::{TcpListener, UdpSocket};
 
-use tower::make::MakeService;
 pub async fn spawn_tcp(addr: &str) -> TcpListener {
     let listener = TcpListener::bind(addr).await;
 

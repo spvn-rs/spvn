@@ -17,6 +17,9 @@ name = "spvn"
 [dependencies]
 spvn_caller = {path = "../spvn_caller"}
 tokio-rustls = "0.23"
+async-trait = {workspace = true} 
+log = { workspace = true }
+cpython = { workspace = true }
 
 tokio = { workspace = true, features = ["sync", "macros"] }
 hyper = { workspace = true, features = ["full"] }

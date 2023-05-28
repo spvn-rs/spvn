@@ -7,7 +7,7 @@ use log::info;
 //     // http::{Method, StatusCode},
 //     // response::{IntoResponse, Response},
 // };
-use once_cell::sync::Lazy;
+
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use serde::{Deserialize, Serialize};
 use spvn_serde::ToPy;

@@ -1,12 +1,24 @@
 use crate::args::ExitStatus;
+use ::spvn::spvn::Spvn;
+use ::spvn::spvn::SpvnCfg;
 use anyhow::Result;
-use clap::Args;
+
+use clap::{ArgAction, Args};
+use colored::Colorize;
 use core::clone::Clone;
-use cpython::Python;
-use spvn_caller::service::caller::{Call, Caller};
-use spvn_caller::{PySpawn, Spawn};
-use spvn_listen::{spawn_socket, spawn_tcp};
+use log::info;
+use notify::event;
+use notify::Watcher;
+use spvn::handlers::tasks::Schedule;
+use std::time::Duration;
+use tokio::runtime::Builder;
+use tokio::time::sleep;
+
+use std::sync::Arc;
+
 use std::{env, path::PathBuf};
+
+use tokio_rustls::rustls::ServerConfig as TlsConfig;
 
 #[derive(Debug, Args)]
 pub struct ServeArgs {
@@ -27,13 +39,27 @@ pub struct ServeArgs {
     pub target: String,
 
     // Bind a static port and reload on changes
-    #[arg(short, long)]
+    #[arg(short, long, action = ArgAction::SetTrue)]
     pub watch: Option<bool>,
 
     // verbose procedures
     #[arg(short, long, env = "SPVN_VERBOSE_PROC")]
     pub verbose: bool,
 
+    // path to ssl server certificates
+    #[arg(long, env = "SPVN_SSL_CERT_FILE")]
+    pub ssl_cert_file: Option<PathBuf>,
+
+    // path to ssl server keys
+    #[arg(long, env = "SPVN_SSL_KEY_FILE")]
+    pub ssl_key_file: Option<PathBuf>,
+
+    #[cfg(not(windows))]
+    // unix user
+    #[arg(long)]
+    pub user: Option<String>,
+
+    #[cfg(not(windows))]
     // proc dir (must have +x perm on UNIX)
     #[arg(long, env = "PROC_DIR")]
     pub proc_dir: Option<PathBuf>,
@@ -117,6 +143,9 @@ pub struct Arguments {
     pub sec_scheme: SecScheme,
     pub http_scheme: HttpScheme,
     pub target: String,
+    watch: bool,
+    ssl_cert_path: Option<PathBuf>,
+    ssl_key_file: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -130,13 +159,51 @@ impl ServeArgs {
                 http_scheme: HttpScheme::from(self),
                 sec_scheme: SecScheme::from(self),
                 target: self.target.clone(),
+                watch: self.watch.unwrap_or(false),
+                ssl_cert_path: self.ssl_cert_file.to_owned(),
+                ssl_key_file: self.ssl_key_file.to_owned(),
             },
             Overrides {},
         )
     }
 }
 
-pub async fn spawn(config: &ServeArgs) -> Result<ExitStatus> {
+trait To<T> {
+    fn to(&self) -> T;
+}
+
+trait Merge<T> {
+    fn merge(&mut self, other: T);
+}
+
+impl Merge<Overrides> for Arguments {
+    fn merge(&mut self, _other: Overrides) {}
+}
+
+impl Into<SpvnCfg> for Arguments {
+    fn into(self) -> SpvnCfg {
+        let mut tls: Option<Arc<TlsConfig>> = None;
+        match self.sec_scheme {
+            SecScheme::NoTLS => {}
+            SecScheme::TLSv12 => {
+                tls = Some(spvn_cfg::tls_config(
+                    self.ssl_key_file.as_ref().expect("no ssl keyfile given"),
+                    self.ssl_cert_path.as_ref().expect("no ssl certfile given"),
+                ))
+            }
+            SecScheme::TLSv13 => {
+                tls = Some(spvn_cfg::tls_config(
+                    self.ssl_key_file.as_ref().expect("no ssl keyfile given"),
+                    self.ssl_cert_path.as_ref().expect("no ssl certfile given"),
+                ))
+            }
+        }
+
+        SpvnCfg { tls }
+    }
+}
+
+pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
     let (arguments, overrides) = config.tree();
     let arguments = arguments.to_owned();
     let overrides = overrides.to_owned();
@@ -147,15 +214,53 @@ pub async fn spawn(config: &ServeArgs) -> Result<ExitStatus> {
     }
 
     let tgt: &str = arguments.target.as_str();
-
     env::set_var("SPVN_SRV_TARGET", tgt);
-    let mut spawn = spvn_caller::PySpawn::new();
-    spawn.spawn();
-    spawn.call(spvn_cfg::ASGIScope::mock());
+    if arguments.watch {
+        let mut watcher = notify::recommended_watcher(
+            |res: std::result::Result<notify::Event, notify::Error>| match res {
+                Ok(event) => {
+                    match event.kind {
+                        notify::EventKind::Modify(event::ModifyKind::Metadata(_)) => {
+                            println!("{} meta created... reloading", "info".blue())
+                        }
+                        notify::EventKind::Create(event::CreateKind::File) => {
+                            println!("{} file created... reloading", "info".blue())
+                        }
+                        notify::EventKind::Modify(event::ModifyKind::Data(_)) => {
+                            println!("{} file changed... reloading", "info".blue())
+                        }
 
-    // // py.
-    // caller.call(py);
+                        // notify::EventKind::Other(_) => { /* ignore meta events */ }
+                        _ => { /* something else changed */ }
+                    }
+                    println!("event: {:?}", event)
+                }
+                Err(e) => println!("watch error: {:?}", e),
+            },
+        )?;
+        let bi = watcher.watch(
+            std::path::Path::new("CHANGELOG.md"),
+            notify::RecursiveMode::NonRecursive,
+        );
 
-    // spawn_tcp( ).await;
+        #[cfg(debug_assertions)]
+        info!("{:#?}", bi)
+    }
+
+    let rt = Builder::new_multi_thread().enable_all().build().unwrap();
+    rt.block_on(async {
+        let cfg: SpvnCfg = arguments.into();
+        let mut own: Spvn = cfg.into();
+        own.service().await;
+        own.schedule(|py| {
+            py.eval("print('called')", None, None);
+        })
+        .await;
+        // sleep
+        sleep(Duration::from_secs(10)).await
+    });
+
+    // own.
+
     Result::Ok(ExitStatus::Success)
 }

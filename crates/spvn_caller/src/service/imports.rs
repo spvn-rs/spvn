@@ -1,5 +1,5 @@
 use core::result::Result::Ok;
-use cpython::{PyDict, PyErr, PyString, Python};
+use cpython::{PyErr, PyString, Python};
 use cpython::{
     PyModule, PyObject,
     _detail::ffi::{PyObject as Py3FFIObj, PySys_GetObject},
@@ -47,7 +47,7 @@ pub fn resolve_import(py: Python, import_str: &str) -> anyhow::Result<caller::Ca
     let resolved: PathBuf;
     match found {
         Ok(path) => resolved = path,
-        Err(e) => {
+        Err(_e) => {
             error!("the target parent path is invalid: {:}", sp[0]);
             return anyhow::Result::Err(ImportError::ErrorCouldntCanonicalize);
         }
