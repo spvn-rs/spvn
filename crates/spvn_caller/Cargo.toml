@@ -16,6 +16,7 @@ license = "MIT"
 [dependencies]
 spvn_cfg = { path = "../spvn_cfg" }
 spvn_serde = { path = "../spvn_serde" }
+spvn_dev = { path = "../spvn_dev" }
 syncpool = { version = "0.1.6" }
 async-trait = { workspace = true}
 tokio = { workspace = true }
@@ -30,5 +31,5 @@ colored = { workspace = true}
 
 
 
-bytes = "1"
+bytes = {workspace = true}
 

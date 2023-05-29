@@ -15,6 +15,7 @@ doc = false
 spvn = { path = "../spvn" }
 spvn_cfg = { path = "../spvn_cfg" }
 spvn_caller = { path = "../spvn_caller"  }
+spvn_serde = { path = "../spvn_serde"  }
 spvn_listen = { path = "../spvn_listen" }
 cpython = { workspace = true, features = ["python3-sys"] }
 

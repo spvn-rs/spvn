@@ -15,12 +15,18 @@ license = "MIT"
 name = "spvn"
 
 [dependencies]
+bytes = { workspace = true }
+colored = { workspace = true }
+
 spvn_caller = {path = "../spvn_caller"}
+spvn_serde = {path = "../spvn_serde"}
+spvn_cfg = {path = "../spvn_cfg"}
+
 tokio-rustls = "0.23"
 async-trait = {workspace = true} 
 log = { workspace = true }
 cpython = { workspace = true }
-
+http-body = { version = "0.4.5" }
 tokio = { workspace = true, features = ["sync", "macros"] }
 hyper = { workspace = true, features = ["full"] }
 http = { workspace = true }
@@ -28,3 +34,4 @@ futures = { version = "0.3.28" }
 tower = {workspace = true, features = ["make", "timeout"]}
 tower-layer = { version = "0.3.2" }
 tower-service = { version = "0.3.2" }
+parking_lot = "0.12.1"

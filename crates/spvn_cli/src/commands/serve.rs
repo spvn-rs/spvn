@@ -1,15 +1,20 @@
 use crate::args::ExitStatus;
-use ::spvn::spvn::Spvn;
 use ::spvn::spvn::SpvnCfg;
+use ::spvn::spvn::{BindArguments, BindMethods, HttpScheme, SecScheme, Spvn};
 use anyhow::Result;
-
 use clap::{ArgAction, Args};
 use colored::Colorize;
 use core::clone::Clone;
+use cpython::Python;
+use cpython::{py_fn, PyDict, PyNone, PyResult};
 use log::info;
 use notify::event;
 use notify::Watcher;
 use spvn::handlers::tasks::Schedule;
+use spvn_caller::PySpawn;
+use spvn_caller::Spawn;
+use spvn_cfg::ASGIScope;
+use spvn_serde::ToPy;
 use std::time::Duration;
 use tokio::runtime::Builder;
 use tokio::time::sleep;
@@ -38,6 +43,9 @@ pub struct ServeArgs {
     #[arg(short, long, value_name = "FILE")]
     pub target: String,
 
+    #[arg(long)]
+    pub n_threads: Option<usize>,
+
     // Bind a static port and reload on changes
     #[arg(short, long, action = ArgAction::SetTrue)]
     pub watch: Option<bool>,
@@ -63,20 +71,6 @@ pub struct ServeArgs {
     // proc dir (must have +x perm on UNIX)
     #[arg(long, env = "PROC_DIR")]
     pub proc_dir: Option<PathBuf>,
-}
-
-#[derive(Debug, Clone)]
-
-pub enum BindMethods {
-    BindTcp,
-    BindUnix,
-    BindSocket,
-}
-#[derive(Debug, Clone)]
-
-pub struct BindArguments {
-    pub bind: String,
-    pub mtd: BindMethods,
 }
 
 impl From<&ServeArgs> for BindArguments {
@@ -109,26 +103,10 @@ impl From<&ServeArgs> for BindArguments {
     }
 }
 
-#[derive(Debug, Clone)]
-
-pub enum SecScheme {
-    NoTLS,
-    TLSv12,
-    TLSv13,
-}
-
 impl From<&ServeArgs> for SecScheme {
     fn from(_value: &ServeArgs) -> Self {
         Self::NoTLS
     }
-}
-
-#[derive(Debug, Clone)]
-
-pub enum HttpScheme {
-    Http11,
-    Http2,
-    WebSockets,
 }
 
 impl From<&ServeArgs> for HttpScheme {
@@ -146,6 +124,7 @@ pub struct Arguments {
     watch: bool,
     ssl_cert_path: Option<PathBuf>,
     ssl_key_file: Option<PathBuf>,
+    n_threads: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -162,6 +141,7 @@ impl ServeArgs {
                 watch: self.watch.unwrap_or(false),
                 ssl_cert_path: self.ssl_cert_file.to_owned(),
                 ssl_key_file: self.ssl_key_file.to_owned(),
+                n_threads: self.n_threads.unwrap_or(1),
             },
             Overrides {},
         )
@@ -183,23 +163,19 @@ impl Merge<Overrides> for Arguments {
 impl Into<SpvnCfg> for Arguments {
     fn into(self) -> SpvnCfg {
         let mut tls: Option<Arc<TlsConfig>> = None;
+        let when = || {
+            Some(spvn_cfg::tls_config(
+                self.ssl_key_file.as_ref().expect("no ssl keyfile given"),
+                self.ssl_cert_path.as_ref().expect("no ssl certfile given"),
+            ))
+        };
         match self.sec_scheme {
             SecScheme::NoTLS => {}
-            SecScheme::TLSv12 => {
-                tls = Some(spvn_cfg::tls_config(
-                    self.ssl_key_file.as_ref().expect("no ssl keyfile given"),
-                    self.ssl_cert_path.as_ref().expect("no ssl certfile given"),
-                ))
-            }
-            SecScheme::TLSv13 => {
-                tls = Some(spvn_cfg::tls_config(
-                    self.ssl_key_file.as_ref().expect("no ssl keyfile given"),
-                    self.ssl_cert_path.as_ref().expect("no ssl certfile given"),
-                ))
-            }
+            SecScheme::TLSv12 => tls = when(),
+            SecScheme::TLSv13 => tls = when(),
         }
 
-        SpvnCfg { tls }
+        SpvnCfg { tls, n_threads: self.n_threads }
     }
 }
 
@@ -215,6 +191,9 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
 
     let tgt: &str = arguments.target.as_str();
     env::set_var("SPVN_SRV_TARGET", tgt);
+   
+   
+   
     if arguments.watch {
         let mut watcher = notify::recommended_watcher(
             |res: std::result::Result<notify::Event, notify::Error>| match res {
@@ -248,19 +227,40 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
     }
 
     let rt = Builder::new_multi_thread().enable_all().build().unwrap();
+    // rt.shutdown_background()
     rt.block_on(async {
         let cfg: SpvnCfg = arguments.into();
         let mut own: Spvn = cfg.into();
         own.service().await;
-        own.schedule(|py| {
-            py.eval("print('called')", None, None);
-        })
-        .await;
-        // sleep
-        sleep(Duration::from_secs(10)).await
+        // own.schedule(|py| {
+        //     py.eval("print('called')", None, None);
+        // });
     });
 
-    // own.
+    // let mut caller = PySpawn::new();
+    // caller.spawn(arguments.n_threads);
+    // info!("{}", tgt);
+    // let st = std::time::Instant::now();
 
+    // caller.call(|py| {
+    //     let scope = ASGIScope::mock();
+    //     let kwargs = PyDict::new(py);
+    //     fn send(py: Python, scope: PyDict) -> PyResult<PyNone> {
+    //         #[cfg(debug_assertions)]
+    //         info!("{:#?}", scope.items(py));
+    //         Ok(PyNone)
+    //     }
+
+    //     fn receive(_: Python) -> PyResult<Vec<u8>> {
+    //         Ok(vec![1, 2, 3])
+    //     }
+    //     kwargs.set_item(py, "scope", scope.to(py));
+    //     kwargs.set_item(py, "send", py_fn!(py, send(scope: PyDict)));
+    //     kwargs.set_item(py, "receive", py_fn!(py, receive()));
+    //     kwargs
+    // });
+    // let end = std::time::Instant::now();
+
+    // info!("call time: {:#?}", end.duration_since(st));
     Result::Ok(ExitStatus::Success)
 }

@@ -6,9 +6,7 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
-spvn = { path = "../spvn" }
-spvn_cli = { path = "../spvn_cli" }
-spvn_cfg = { path = "../spvn_cfg" }
 
 simple_logger = { workspace = true }
 log = { workspace = true }
+colored = { workspace = true }

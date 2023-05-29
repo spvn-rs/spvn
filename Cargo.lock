@@ -1174,12 +1174,18 @@ name = "spvn"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "bytes",
+ "colored",
  "cpython",
  "futures",
  "http",
+ "http-body",
  "hyper",
  "log",
+ "parking_lot",
  "spvn_caller",
+ "spvn_cfg",
+ "spvn_serde",
  "tokio",
  "tokio-rustls",
  "tower",
@@ -1202,6 +1208,7 @@ dependencies = [
  "serde_json",
  "simple_logger",
  "spvn_cfg",
+ "spvn_dev",
  "spvn_serde",
  "syncpool",
  "tokio",
@@ -1214,6 +1221,7 @@ dependencies = [
  "async-trait",
  "axum",
  "axum-core",
+ "bytes",
  "cpython",
  "http",
  "hyper",
@@ -1243,6 +1251,7 @@ dependencies = [
  "spvn_caller",
  "spvn_cfg",
  "spvn_listen",
+ "spvn_serde",
  "tokio",
  "tokio-rustls",
 ]
@@ -1251,11 +1260,9 @@ dependencies = [
 name = "spvn_dev"
 version = "0.1.0"
 dependencies = [
+ "colored",
  "log",
  "simple_logger",
- "spvn",
- "spvn_cfg",
- "spvn_cli",
 ]
 
 [[package]]

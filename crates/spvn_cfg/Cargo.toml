@@ -8,6 +8,7 @@ rust-version = { workspace = true }
 [lib]
 
 [dependencies]
+bytes = {workspace = true}
 spvn_serde = { path =  "../spvn_serde" }
 log = { workspace = true }
 toml = { workspace = true }

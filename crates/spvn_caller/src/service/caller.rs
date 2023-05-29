@@ -1,143 +1,23 @@
-use cpython::py_fn;
+use async_trait::async_trait;
+use cpython::_detail::ffi::Py_None;
+use cpython::{py_class, py_fn, PyErr};
 use cpython::{NoArgs, ObjectProtocol, PyNone};
 use cpython::{PyDict, PyObject, PyResult, Python, _detail::ffi::PyAsyncMethods};
 use log::info;
 use spvn_serde::ToPy;
+use std::{
+    cmp::max,
+    mem::{align_of, size_of},
+    ops::{Deref, DerefMut},
+    ptr,
+};
+
+use std::marker::PhantomData;
 
 pub struct Awaitable(PyAsyncMethods);
 
-// impl Awaitable {}
-// impl ToPyObject for Awaitable {
-//     type ObjectType = PyObject;
-
-//     fn to_py_object(&self, py: Python) -> PyObject {
-//         unsafe {
-//             let v = PyNone.into_py_object(py).as_ptr();
-
-//             let ptr: *mut ffi::PyObject = ffi::_PyObject_New(v);
-//             let t = from_owned_ptr_or_panic(py, ptr);
-
-//             t
-//         }
-//     }
-// }
-
 pub struct Caller {
     pub app: PyObject,
-}
-
-pub trait Call<T: ToPy<PyDict>> {
-    fn call(self, py: Python, scope: T);
-}
-
-impl<T: ToPy<PyDict>> Call<T> for Caller {
-    fn call(self, py: Python, scope: T) {
-        // py.allow_threads(|| {
-
-        // });
-        // let cast = to_py_object(py, scope);
-        // let py_scope = match cast {
-        //     Ok(pyobj) => pyobj,
-        //     Err(e) => panic!("{:#?}", e),
-        // };
-
-        // let args = PyTuple::new(py, &[]);
-
-        fn send(py: Python, scope: PyDict) -> PyResult<PyNone> {
-            #[cfg(debug_assertions)]
-            info!("{:#?}", scope.items(py));
-            // let res = Awaitable(PyAsyncMethods {
-            //     am_await: fn(*mut ffi::PyObject) -> *mut ffi::PyObject {
-
-            //     },
-            //     am_aiter: (),
-            //     am_anext: (),
-            // });
-            // fn finish(py: Python) -> PyResult<bool> {
-            //     Ok(true)
-            // // }
-            // let _bootstrap_ok = res
-            //     ._unsafe_inner
-            //     .set_item(py, "__await__", py_fn!(py, finish()));
-
-            // #[cfg(debug_assertions)]
-            // info!("bootstrapped: {:#?}", _bootstrap_ok);
-
-            Ok(PyNone)
-        }
-
-        fn receive(_: Python) -> PyResult<Vec<u8>> {
-            Ok(vec![1, 2, 3])
-        }
-
-        let kwargs = PyDict::new(py);
-
-        kwargs.set_item(py, "scope", scope.to(py));
-        kwargs.set_item(py, "send", py_fn!(py, send(scope: PyDict)));
-        kwargs.set_item(py, "receive", py_fn!(py, receive()));
-
-        let result = self.app.call(py, NoArgs, Some(&kwargs));
-        #[cfg(debug_assertions)]
-        log::info!("call result {:#?}", result);
-
-        let awa = match result {
-            Ok(succ) => succ,
-            Err(e) => panic!("{:#?}", e),
-        };
-
-        let hasawait = awa.getattr(py, "__await__");
-        #[cfg(debug_assertions)]
-        log::info!("await {:#?}", hasawait);
-
-        let awaitable = match hasawait {
-            Ok(succ) => succ,
-            Err(e) => panic!("{:#?}", e),
-        };
-
-        let res = awaitable.call(py, NoArgs, None);
-        #[cfg(debug_assertions)]
-        log::info!("await result {:#?}", res);
-
-        let awaitable = match res {
-            Ok(succ) => succ,
-            Err(e) => panic!("{:#?}", e),
-        };
-
-        #[cfg(debug_assertions)]
-        log::info!("coroutine wrapper {:#?}", awaitable);
-
-        let it = awaitable.iter(py);
-        let mut await_result = match it {
-            Ok(succ) => succ,
-            Err(e) => panic!("{:#?}", e),
-        };
-
-        #[cfg(debug_assertions)]
-        log::info!("result iterator");
-
-        let mut n = 0;
-        let mut py_result: Option<Result<PyObject, cpython::PyErr>> = None;
-        loop {
-            let sized = await_result.next();
-            py_result = match sized {
-                Some(obj) => Some(obj),
-                None => break,
-            };
-
-            n += 1;
-
-            match py_result.unwrap() {
-                Ok(result) => result,
-                Err(e) => {
-                    info!("{:#?}", e);
-                    break;
-                }
-            };
-
-            #[cfg(debug_assertions)]
-            log::info!("iters {:#?}", n);
-        }
-    }
 }
 
 impl From<PyObject> for Caller {
@@ -145,3 +25,135 @@ impl From<PyObject> for Caller {
         Caller { app }
     }
 }
+
+pub type SerialToPyKwargs = fn(Python, PyDict) -> PyDict;
+
+pub trait Call {
+    fn call(&self, py: Python, serialize: SerialToPyKwargs, base: PyDict) -> anyhow::Result<()>;
+    fn process_async(&self, py: Python, hasawait: PyObject) -> Result<cpython::PyObject, PyErr>;
+}
+
+impl Call for Caller {
+    fn process_async(&self, py: Python, awaitable: PyObject) -> Result<cpython::PyObject, PyErr> {
+        let res = awaitable.call(py, NoArgs, None);
+        // coroutine = fut.__await__()
+
+        #[cfg(debug_assertions)]
+        log::info!("await result {:#?}", res);
+
+        let awaitable = match res {
+            Ok(succ) => succ,             // coroutine
+            Err(e) => panic!("{:#?}", e), // called await on non awaitable
+        };
+
+        let it = awaitable.iter(py);
+        let mut await_result = match it {
+            Ok(succ) => succ,             // <coroutine_wrapper>
+            Err(e) => panic!("{:#?}", e), // some condition we havent caught
+        };
+
+        let mut py_result: Option<Result<PyObject, cpython::PyErr>> = None;
+        loop {
+            py_result = match await_result.next() {
+                Some(obj) => {
+                    // this can 100% lead to infinite loops if there is an error traceback, so
+                    // TODO: fix infinite loop conditions
+                    match obj {
+                        Ok(o) => Some(Ok(o)),
+                        Err(p) => Some(match p.pvalue {
+                            Some(v) => Ok(v),
+                            None => break,
+                        }),
+                    }
+                }
+                // pass it through
+                None => {
+                    break;
+                } // break if the coroutine has completed
+            };
+        }
+
+        #[cfg(debug_assertions)]
+        log::info!("py_result {:#?}", py_result,);
+
+        let none: PyObject;
+        unsafe {
+            none = PyObject::from_borrowed_ptr(py, Py_None());
+        }
+        let res_safe: Result<PyObject, PyErr> = py_result.unwrap_or(Ok(none));
+        match res_safe {
+            Ok(result) => Ok(result), // if result has value, stop iteration is not called
+            Err(e) => {
+                info!("ERR E {:#?}", e);
+                let v = e.pvalue.unwrap();
+                // stop iteration
+                info!("ERR E {:#?}", v);
+                Ok(v) // PyNone can be returned so we unwrap
+            }
+        }
+    }
+
+    fn call(&self, py: Python, serialize: SerialToPyKwargs, base: PyDict) -> anyhow::Result<()> {
+        let kwargs = serialize(py, base);
+        let result = self.app.call(py, NoArgs, Some(&kwargs));
+        let awa = match result {
+            Ok(succ) => succ,
+            Err(e) => panic!("{:#?}", e),
+        };
+        let hasawait = awa.getattr(py, "__await__");
+        let hasawait = match hasawait {
+            Ok(toawait) => self.process_async(py, toawait),
+            Err(e) => Ok(awa),
+        };
+        #[cfg(debug_assertions)]
+        log::info!("post await {:#?}", hasawait);
+        match hasawait {
+            Ok(obj) => info!("{:#?}", obj),
+            Err(obj) => panic!("{:#?}", obj),
+        };
+        anyhow::Ok(())
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct SyncSafeCaller {
+    ptr: std::ptr::NonNull<Caller>,
+    _data: PhantomData<Caller>,
+}
+
+impl SyncSafeCaller {
+    pub fn new(caller: Caller) -> Self {
+        let mut memptr: *mut Caller = ptr::null_mut();
+        unsafe {
+            let ret = libc::posix_memalign(
+                (&mut memptr as *mut *mut Caller).cast(),
+                max(align_of::<Caller>(), size_of::<usize>()),
+                size_of::<Caller>(),
+            );
+            assert_eq!(ret, 0, "Failed to allocate or invalid alignment");
+        };
+        let ptr = { ptr::NonNull::new(memptr).expect("posix_memalign should have returned 0") };
+        unsafe {
+            ptr.as_ptr().write(caller);
+        }
+        Self {
+            ptr,
+            _data: PhantomData::default(),
+        }
+    }
+}
+
+impl Deref for SyncSafeCaller {
+    type Target = Caller;
+    fn deref(&self) -> &Self::Target {
+        unsafe { self.ptr.as_ref() }
+    }
+}
+
+impl DerefMut for SyncSafeCaller {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { self.ptr.as_mut() }
+    }
+}
+
+unsafe impl Send for SyncSafeCaller {}

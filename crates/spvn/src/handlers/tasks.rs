@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use colored::Colorize;
 use cpython::Python;
 use log::info;
 use std::time::Instant;
@@ -37,18 +38,7 @@ impl CallRunner {
             info!("message {:#?}", message.sched_time);
 
             (message.fu)(Python::acquire_gil().python());
-
-            // unsafe {
-            //     // yolo
-            //     let gil = Python::assume_gil_acquired();
-            //     {
-            //         gil.allow_threads(|| {
-            //             (message.fu)(Python::assume_gil_acquired());
-            //         });
-            //     }
-            // }
         }
-
         #[cfg(debug_assertions)]
         info!("oh no done watching");
     }
@@ -85,9 +75,11 @@ impl Schedule for Scheduler {
             Ok(_) => {}
             Err(e) => {
                 #[cfg(debug_assertions)]
-                info!("{:#?}", e.to_string());
-
-                panic!("{:#?}", e.to_string());
+                eprintln!(
+                    "{} scheduling task due to: {:#?}",
+                    "error".bold().red(),
+                    e.to_string()
+                );
             }
         };
     }
