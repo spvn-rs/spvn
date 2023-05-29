@@ -17,7 +17,7 @@ spvn_cfg = { path = "../spvn_cfg" }
 spvn_caller = { path = "../spvn_caller"  }
 spvn_serde = { path = "../spvn_serde"  }
 spvn_listen = { path = "../spvn_listen" }
-cpython = { workspace = true, features = ["python3-sys"] }
+
 
 simple_logger = { workspace = true }
 log = { workspace = true }
@@ -27,3 +27,4 @@ tokio = { workspace = true, features = ["sync", "rt", "rt-multi-thread"]}
 colored = { workspace = true}
 notify = { version = "6.0.0" }
 tokio-rustls = "0.23"
+pyo3 = {workspace = true, features = []}

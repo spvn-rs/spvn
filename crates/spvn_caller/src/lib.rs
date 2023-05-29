@@ -1,26 +1,20 @@
 pub mod service;
-use std::{
-    env,
-    future::Future,
-    ops::{Deref, DerefMut},
-    pin::Pin,
-};
+use std::{env, ops::DerefMut};
 
-use crate::service::caller::SerialToPyKwargs;
 use crate::service::imports::resolve_import;
-use async_trait::async_trait;
-use cpython::{
-    py_class, py_fn, FromPyObject, NoArgs, ObjectProtocol, PyDict, PyNone, PyResult, Python,
-    ToPyObject, _detail::ffi::vectorcallfunc,
-};
-use libc::c_void;
+
+// use cpython::{
+//     ObjectProtocol, PyDict, Python,
+// };
+use pyo3::ffi::Py_None;
+use pyo3::prelude::*;
+use pyo3::types::IntoPyDict;
+use pyo3::types::PyDict;
 
 use log::info;
-use service::caller::{Call, Caller, SyncSafeCaller};
+use service::caller::{Call, SyncSafeCaller};
 use syncpool::prelude::*;
-use tokio::task::JoinHandle;
-
-
+use pyo3::types::PyTuple;
 pub struct PySpawn {
     pool: Option<SyncPool<SyncSafeCaller>>,
 }
@@ -104,14 +98,14 @@ impl PySpawn {
         PySpawn { pool: None }
     }
 
-    pub fn call(self, serialize: SerialToPyKwargs, base: PyDict) {
+    pub fn call(self, base: impl IntoPy<Py<PyTuple>>) {
         let gil = Python::acquire_gil();
         let ini_result = self
             .pool
             .expect("call before caller acquired")
             .get()
             .deref_mut()
-            .call(gil.python(), serialize, base);
+            .call(gil.python(), base);
         // .call(, serialize);
 
         #[cfg(debug_assertions)]
@@ -148,15 +142,12 @@ impl Spawn for PySpawn {
     }
 }
 
-
-
-
 #[cfg(test)]
 #[allow(unused_must_use, unused_imports)]
 mod tests {
     use crate::{PySpawn, Spawn};
-    use cpython::PyDict;
-    use cpython::{py_fn, PyNone, PyResult, Python};
+    // use cpython::PyDict;
+    // use cpython::{py_fn, PyNone, PyResult, Python};
     use log::info;
     use spvn_cfg::ASGIScope;
     use spvn_dev::init_test_hooks;

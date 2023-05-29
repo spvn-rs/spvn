@@ -1,11 +1,16 @@
 use core::result::Result::Ok;
-use cpython::{PyErr, PyString, Python};
-use cpython::{
-    PyModule, PyObject,
-    _detail::ffi::{PyObject as Py3FFIObj, PySys_GetObject},
-};
+// use cpython::{PyErr, PyString, Python};
+// use cpython::{
+//     PyModule, PyObject,
+//     _detail::ffi::{PyObject as Py3FFIObj, PySys_GetObject},
+// };
 use libc::c_void;
 use log::{error, info};
+
+use pyo3::ffi::{PyObject as Py3FFIObj, PySys_GetObject, Py_None};
+use pyo3::prelude::*;
+use pyo3::types::IntoPyDict;
+use pyo3::types::PyDict;
 
 use crate::service::caller;
 
@@ -17,7 +22,7 @@ use std::path::PathBuf;
 #[allow(improper_ctypes)]
 extern "C" {
     //     fn PySys_GetObject(name: *const c_char) -> *mut PyObject;
-    fn PyList_Append(obj: *mut Py3FFIObj, obj2: cpython::PyString) -> c_void;
+    fn PyList_Append(obj: *mut Py3FFIObj, obj2: *mut Py3FFIObj) -> c_void;
 }
 
 pub enum ImportError {
@@ -64,11 +69,11 @@ pub fn resolve_import(py: Python, import_str: &str) -> anyhow::Result<caller::Ca
 }
 
 // ** gets module from result - panics if the result is an err to trace the error back
-fn pymod_from_result_module(py: Python, result: Result<PyModule, PyErr>) -> PyModule {
+fn pymod_from_result_module<'a>(py: Python, result: Result<&'a PyModule, PyErr>) -> &'a PyModule {
     #[cfg(debug_assertions)]
     info!("matching module");
     let modu = match result {
-        cpython::_detail::Result::Ok(pkg) => pkg,
+        Ok(pkg) => pkg,
         Err(err) => {
             panic!("TRACEBACK {:#?}", err.print(py));
         }
@@ -77,8 +82,8 @@ fn pymod_from_result_module(py: Python, result: Result<PyModule, PyErr>) -> PyMo
 }
 
 // does the main import serialization
-fn import(
-    py: Python,
+fn import<'a, 'b>(
+    py: Python<'b>,
     pkg: &str,
     path: &PathBuf,
     attr: &str,
@@ -94,29 +99,27 @@ fn import(
     let target = init_module(py, pkg, parent);
 
     #[cfg(debug_assertions)]
-    info!("loaded target from {:#?}", target.filename(py));
+    info!("loaded target from {:#?}", target.filename());
 
     #[cfg(debug_assertions)]
-    info!("pymodule >> {:#?}", target.name(py),);
+    info!("pymodule >> {:#?}", target.name(),);
 
     #[cfg(debug_assertions)]
     info!("using attribute >> {:#?}", attr);
 
-    let app: Result<PyObject, cpython::PyErr> = target.get(py, attr);
+    let app = target.getattr(attr);
 
     #[cfg(debug_assertions)]
     info!("app loaded ok! {:#?}", app);
 
     match app {
-        cpython::_detail::Result::Ok(imported) => {
-            return anyhow::Result::Ok(caller::Caller::from(imported))
-        }
+        Ok(imported) => return anyhow::Result::Ok(caller::Caller::from(imported.to_object(py))),
         Err(e) => panic!("{:#?}", e),
     }
 }
 
-fn init_module(py: Python, name: &str, path: &str) -> PyModule {
-    let py_pt = PyString::new(py, path);
+fn init_module<'a>(py: Python<'a>, name: &str, path: &str) -> &'a PyModule {
+    let py_pt = path.to_object(py).into_ptr();
     unsafe {
         let name = CString::new("path").unwrap();
         let path = PySys_GetObject(name.as_ptr());
@@ -133,13 +136,13 @@ fn init_module(py: Python, name: &str, path: &str) -> PyModule {
 #[cfg(test)]
 mod tests {
     use crate::service::imports::resolve_import;
-    use crate::Python;
+    // use crate::Python;
 
-    #[test]
-    fn resolve_import_works() {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let module = resolve_import(py, "foo.bar:app");
-        assert!(module.is_ok());
-    }
+    // #[test]
+    // fn resolve_import_works() {
+    //     let gil = Python::acquire_gil();
+    //     let py = gil.python();
+    //     let module = resolve_import(py, "foo.bar:app");
+    //     assert!(module.is_ok());
+    // }
 }

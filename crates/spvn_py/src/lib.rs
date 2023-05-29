@@ -1,11 +1,30 @@
-use pyo3::prelude::*;
+use bytes;
+use pyo3::{prelude::*, types::PyBytes};
 use simple_logger::SimpleLogger;
+use spvn_cfg::ASGIType;
 
 #[pyclass]
-struct PyConfig {}
+struct AsgiResponse {
+    _type: String,
+    body: Option<bytes::Bytes>,
+    headers: Vec<(String, Vec<u8>)>,
+}
 
 #[pyfunction]
-fn bind(_config: &PyConfig) {}
+fn new_asgi_response(
+    _type: String,
+    body: Option<&PyBytes>,
+    headers: Vec<(String, Vec<u8>)>,
+) -> AsgiResponse {
+    let bts = body.unwrap().as_bytes();
+    // let body = bytes::Bytes::from(bts);
+
+    AsgiResponse {
+        _type,
+        body: None,
+        headers,
+    }
+}
 
 #[pymodule]
 fn spvn(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
@@ -15,6 +34,8 @@ fn spvn(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
         assert!(py.version_info() >= (3, 10));
     });
 
-    m.add_function(wrap_pyfunction!(bind, m)?)?;
+    m.add_function(wrap_pyfunction!(new_asgi_response, m)?)?;
+    // m.add_function(!(bind, m)?)?;
+    m.add_class::<AsgiResponse>();
     Ok(())
 }

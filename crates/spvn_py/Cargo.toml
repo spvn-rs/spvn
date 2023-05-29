@@ -10,8 +10,9 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { workspace = true , features = ["generate-import-lib"] }
-pyo3-asyncio = { workspace = true }
+bytes = {workspace = true}
+spvn_cfg = {path = "../spvn_cfg"}
+pyo3 = { workspace = true , features = [] }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

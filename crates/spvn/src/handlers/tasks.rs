@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use colored::Colorize;
-use cpython::Python;
 use log::info;
+use pyo3::Python;
 use std::time::Instant;
 use tokio::sync::{
     mpsc,

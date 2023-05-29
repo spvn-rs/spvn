@@ -3,15 +3,6 @@
 version = 3
 
 [[package]]
-name = "aho-corasick"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67fc08ce920c31afb70f013dcce1bfc3a3195de6a228474e45e1f145b36f8d04"
-dependencies = [
- "memchr",
-]
-
-[[package]]
 name = "anstream"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -236,19 +227,6 @@ dependencies = [
  "atty",
  "lazy_static",
  "winapi",
-]
-
-[[package]]
-name = "cpython"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3052106c29da7390237bc2310c1928335733b286287754ea85e6093d2495280e"
-dependencies = [
- "libc",
- "num-traits",
- "paste",
- "python3-sys",
- "serde",
 ]
 
 [[package]]
@@ -718,15 +696,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-traits"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
-dependencies = [
- "autocfg",
-]
-
-[[package]]
 name = "num_cpus"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -773,12 +742,6 @@ dependencies = [
  "smallvec",
  "windows-sys 0.45.0",
 ]
-
-[[package]]
-name = "paste"
-version = "1.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f746c4065a8fa3fe23974dd82f15431cc8d40779821001404d10d2e79ca7d79"
 
 [[package]]
 name = "percent-encoding"
@@ -845,38 +808,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "pyo3-asyncio"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3564762e37035cfc486228e10b0528460fa026d681b5763873c693aa0d5c260"
-dependencies = [
- "futures",
- "once_cell",
- "pin-project-lite",
- "pyo3",
- "pyo3-asyncio-macros",
- "tokio",
-]
-
-[[package]]
-name = "pyo3-asyncio-macros"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be72d4cd43a27530306bd0d20d3932182fbdd072c6b98d3638bc37efb9d559dd"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "pyo3-build-config"
 version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cb946f5ac61bb61a5014924910d936ebd2b23b705f7a4a3c40b05c720b079a3"
 dependencies = [
  "once_cell",
- "python3-dll-a",
  "target-lexicon",
 ]
 
@@ -914,25 +851,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "python3-dll-a"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "212d74540270e3a22eed5f0d4bbc0765dff20958d694e9d4f5ebe6e22778c422"
-dependencies = [
- "cc",
-]
-
-[[package]]
-name = "python3-sys"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49f8b50d72fb3015735aa403eebf19bbd72c093bfeeae24ee798be5f2f1aab52"
-dependencies = [
- "libc",
- "regex",
-]
-
-[[package]]
 name = "pythonize"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -959,23 +877,6 @@ checksum = "fb5a58c1855b4b6819d59012155603f0b22ad30cad752600aadfcb695265519a"
 dependencies = [
  "bitflags",
 ]
-
-[[package]]
-name = "regex"
-version = "1.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81ca098a9821bd52d6b24fd8b10bd081f47d39c22778cafaa75a2857a62c6390"
-dependencies = [
- "aho-corasick",
- "memchr",
- "regex-syntax",
-]
-
-[[package]]
-name = "regex-syntax"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "436b050e76ed2903236f032a59761c1eb99e1b0aead2c257922771dab1fc8c78"
 
 [[package]]
 name = "ring"
@@ -1173,16 +1074,17 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 name = "spvn"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "bytes",
  "colored",
- "cpython",
  "futures",
  "http",
  "http-body",
  "hyper",
  "log",
  "parking_lot",
+ "pyo3",
  "spvn_caller",
  "spvn_cfg",
  "spvn_serde",
@@ -1201,9 +1103,9 @@ dependencies = [
  "async-trait",
  "bytes",
  "colored",
- "cpython",
  "libc",
  "log",
+ "pyo3",
  "serde",
  "serde_json",
  "simple_logger",
@@ -1222,11 +1124,11 @@ dependencies = [
  "axum",
  "axum-core",
  "bytes",
- "cpython",
  "http",
  "hyper",
  "log",
  "once_cell",
+ "pyo3",
  "rustls-pemfile",
  "serde",
  "spvn_serde",
@@ -1243,9 +1145,9 @@ dependencies = [
  "anyhow",
  "clap",
  "colored",
- "cpython",
  "log",
  "notify",
+ "pyo3",
  "simple_logger",
  "spvn",
  "spvn_caller",
@@ -1304,13 +1206,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bytes",
  "log",
  "pyo3",
- "pyo3-asyncio",
  "pythonize",
  "serde",
  "serde_json",
  "simple_logger",
+ "spvn_cfg",
  "tokio",
 ]
 
@@ -1318,7 +1221,8 @@ dependencies = [
 name = "spvn_serde"
 version = "0.1.0"
 dependencies = [
- "cpython",
+ "libc",
+ "pyo3",
  "serde",
  "serde_json",
 ]

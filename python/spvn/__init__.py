@@ -1,1 +1,2 @@
-from spvn import bind, PyConfig
+from .spvn import *
+

@@ -9,10 +9,14 @@ test-caller = "cargo test --package spvn_calle"
 rustflags = [
   "-C", "link-arg=-undefined",
   "-C", "link-arg=dynamic_lookup",
+  "-C", "link-args=-Wl,-rpath,/Library/Developer/CommandLineTools/Library/Frameworks",
+
 ]
 
 [target.aarch64-apple-darwin]
 rustflags = [
   "-C", "link-arg=-undefined",
   "-C", "link-arg=dynamic_lookup",
+  "-C", "link-args=-Wl,-rpath,/Library/Developer/CommandLineTools/Library/Frameworks",
+
 ]

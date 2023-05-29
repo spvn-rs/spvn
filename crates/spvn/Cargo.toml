@@ -13,6 +13,8 @@ license = "MIT"
 
 [lib]
 name = "spvn"
+crate-type = ["rlib"]
+
 
 [dependencies]
 bytes = { workspace = true }
@@ -22,10 +24,12 @@ spvn_caller = {path = "../spvn_caller"}
 spvn_serde = {path = "../spvn_serde"}
 spvn_cfg = {path = "../spvn_cfg"}
 
+anyhow = {workspace = true}
 tokio-rustls = "0.23"
 async-trait = {workspace = true} 
 log = { workspace = true }
-cpython = { workspace = true }
+pyo3 = {workspace = true, features = []}
+
 http-body = { version = "0.4.5" }
 tokio = { workspace = true, features = ["sync", "macros"] }
 hyper = { workspace = true, features = ["full"] }

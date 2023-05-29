@@ -1,29 +1,25 @@
 use crate::handlers::tasks::{Schedule, Scheduler};
 
-use cpython::Python;
 use hyper::server::conn::Http;
 use log::info;
 use spvn_caller::service::caller::SyncSafeCaller;
-use spvn_caller::{PySpawn, Spawn};
+use spvn_caller::PySpawn;
 
 use crate::startup::startup_message;
-use async_trait::async_trait;
-use bytes::Bytes;
+
 use futures::executor;
-use http_body::Full;
+use pyo3::Python;
 use tokio_rustls::rustls::ServerConfig;
 
 use crate::handlers::http::Bridge;
-use colored::Colorize;
-use futures::future::{BoxFuture, FutureExt};
+
 use futures::lock::Mutex;
-use hyper::{Request, Response};
+
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio_rustls::{Accept, TlsAcceptor};
-
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio_rustls::TlsAcceptor;
 
 #[derive(Debug, Clone)]
 pub enum BindMethods {
@@ -100,13 +96,19 @@ impl Spvn {
         bi: Arc<Mutex<SyncSafeCaller>>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         loop {
-            let (stream, peer_addr) = listener.accept().await?;
+            let (stream, _peer_addr) = listener.accept().await?;
             let acceptor = acceptor.clone();
             let bi = bi.clone();
             let fut = async move {
                 let stream = acceptor.accept(stream).await?;
                 if let Err(err) = Http::new()
-                    .serve_connection(stream, Bridge { caller: bi.clone() })
+                    .serve_connection(
+                        stream,
+                        Box::pin(Bridge {
+                            caller: bi.clone(),
+                            state: Arc::new(Mutex::new(HashMap::new())),
+                        }),
+                    )
                     .await
                 {
                     println!("Failed to serve connection: {:?}", err);
@@ -127,7 +129,13 @@ impl Spvn {
             let bi = bi.clone();
             let fut = async move {
                 if let Err(err) = Http::new()
-                    .serve_connection(stream, Bridge { caller: bi.clone() })
+                    .serve_connection(
+                        stream,
+                        Box::pin(Bridge {
+                            caller: bi.clone(),
+                            state: Arc::new(Mutex::new(HashMap::new())),
+                        }),
+                    )
                     .await
                 {
                     println!("Failed to serve connection: {:?}", err);
@@ -140,7 +148,7 @@ impl Spvn {
     }
 
     /// add a callback to the task scheduler
-    pub fn schedule(&mut self, fu: fn(cpython::Python)) {
+    pub fn schedule(&mut self, fu: fn(Python)) {
         #[cfg(debug_assertions)]
         info!("scheduling");
         executor::block_on(self.scheduler.schedule(fu));

@@ -6,6 +6,7 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 
 [lib]
+crate-type = ["rlib"]
 
 [dependencies]
 bytes = {workspace = true}
@@ -13,7 +14,9 @@ spvn_serde = { path =  "../spvn_serde" }
 log = { workspace = true }
 toml = { workspace = true }
 serde = { workspace = true }
-cpython = { workspace = true, features = ["serde-convert"] }
+pyo3 = {workspace = true, features = []}
+
+
 axum = { workspace = true, features = [] }
 axum-core = { workspace = true }
 hyper = { workspace = true, features = ["full"] }

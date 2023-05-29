@@ -1,10 +1,14 @@
+// use cpython::_detail::ffi::Py_None;
+// use cpython::{PyErr};
+// use cpython::{NoArgs, ObjectProtocol};
+// use cpython::{PyDict, PyObject, Python, _detail::ffi::PyAsyncMethods};
 use async_trait::async_trait;
-use cpython::_detail::ffi::Py_None;
-use cpython::{py_class, py_fn, PyErr};
-use cpython::{NoArgs, ObjectProtocol, PyNone};
-use cpython::{PyDict, PyObject, PyResult, Python, _detail::ffi::PyAsyncMethods};
 use log::info;
-use spvn_serde::ToPy;
+use pyo3::ffi::Py_None;
+use pyo3::prelude::*;
+use pyo3::types::IntoPyDict;
+use pyo3::types::{PyDict, PyTuple};
+
 use std::{
     cmp::max,
     mem::{align_of, size_of},
@@ -14,28 +18,33 @@ use std::{
 
 use std::marker::PhantomData;
 
-pub struct Awaitable(PyAsyncMethods);
-
 pub struct Caller {
-    pub app: PyObject,
+    pub app: Box<PyObject>,
 }
 
-impl From<PyObject> for Caller {
-    fn from(app: PyObject) -> Self {
-        Caller { app }
+impl From<Py<PyAny>> for Caller {
+    fn from(app: Py<PyAny>) -> Self {
+        Caller { app: Box::new(app) }
     }
 }
 
-pub type SerialToPyKwargs = fn(Python, PyDict) -> PyDict;
+// pub type SerialToPyKwargs = fn<'a>(Python, &PyDict) -> &'a PyDict;
+
+// static pt: SerialToPyKwargs = || {
+
+// }
+// pub fn passthru<'a>(py: Python<'a>, dict: &'a PyDict) -> &'a PyDict {
+//     dict
+// }
 
 pub trait Call {
-    fn call(&self, py: Python, serialize: SerialToPyKwargs, base: PyDict) -> anyhow::Result<()>;
-    fn process_async(&self, py: Python, hasawait: PyObject) -> Result<cpython::PyObject, PyErr>;
+    fn call(&self, py: Python, base: impl IntoPy<Py<PyTuple>>) -> anyhow::Result<()>;
+    fn process_async(&self, py: Python, hasawait: PyObject) -> Result<PyObject, PyErr>;
 }
 
 impl Call for Caller {
-    fn process_async(&self, py: Python, awaitable: PyObject) -> Result<cpython::PyObject, PyErr> {
-        let res = awaitable.call(py, NoArgs, None);
+    fn process_async(&self, py: Python, awaitable: PyObject) -> Result<PyObject, PyErr> {
+        let res = awaitable.call(py, (), None);
         // coroutine = fut.__await__()
 
         #[cfg(debug_assertions)]
@@ -46,31 +55,26 @@ impl Call for Caller {
             Err(e) => panic!("{:#?}", e), // called await on non awaitable
         };
 
-        let it = awaitable.iter(py);
+        let it = awaitable.getattr(py, "__next__");
         let mut await_result = match it {
             Ok(succ) => succ,             // <coroutine_wrapper>
             Err(e) => panic!("{:#?}", e), // some condition we havent caught
         };
 
-        let mut py_result: Option<Result<PyObject, cpython::PyErr>> = None;
+        let mut py_result: Option<Result<PyObject, PyErr>> = None;
+        let mut n = 0;
         loop {
-            py_result = match await_result.next() {
-                Some(obj) => {
-                    // this can 100% lead to infinite loops if there is an error traceback, so
-                    // TODO: fix infinite loop conditions
-                    match obj {
-                        Ok(o) => Some(Ok(o)),
-                        Err(p) => Some(match p.pvalue {
-                            Some(v) => Ok(v),
-                            None => break,
-                        }),
-                    }
-                }
-                // pass it through
-                None => {
+            n += 1;
+            py_result = match await_result.call0(py) {
+                Ok(o) => Some(Ok(o)),
+                Err(p) => {
+                    py_result = Some(Ok(p.value(py).to_object(py)));
                     break;
-                } // break if the coroutine has completed
+                }
             };
+
+            #[cfg(debug_assertions)]
+            info!("loop {}", n)
         }
 
         #[cfg(debug_assertions)]
@@ -85,7 +89,7 @@ impl Call for Caller {
             Ok(result) => Ok(result), // if result has value, stop iteration is not called
             Err(e) => {
                 info!("ERR E {:#?}", e);
-                let v = e.pvalue.unwrap();
+                let v = e.value(py).to_object(py);
                 // stop iteration
                 info!("ERR E {:#?}", v);
                 Ok(v) // PyNone can be returned so we unwrap
@@ -93,17 +97,19 @@ impl Call for Caller {
         }
     }
 
-    fn call(&self, py: Python, serialize: SerialToPyKwargs, base: PyDict) -> anyhow::Result<()> {
-        let kwargs = serialize(py, base);
-        let result = self.app.call(py, NoArgs, Some(&kwargs));
+    fn call(&self, py: Python, base: impl IntoPy<Py<PyTuple>>) -> anyhow::Result<()> {
+        // let kwargs = serialize(py, base);
+        // let app =
+        let result = self.app.to_object(py).call(py, base, None);
         let awa = match result {
             Ok(succ) => succ,
             Err(e) => panic!("{:#?}", e),
         };
         let hasawait = awa.getattr(py, "__await__");
+
         let hasawait = match hasawait {
             Ok(toawait) => self.process_async(py, toawait),
-            Err(e) => Ok(awa),
+            Err(_e) => Ok(awa),
         };
         #[cfg(debug_assertions)]
         log::info!("post await {:#?}", hasawait);
