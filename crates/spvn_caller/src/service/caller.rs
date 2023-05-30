@@ -4,11 +4,13 @@
 // use cpython::{PyDict, PyObject, Python, _detail::ffi::PyAsyncMethods};
 use async_trait::async_trait;
 use log::info;
+use pyo3::exceptions::{asyncio::*, *};
 use pyo3::ffi::Py_None;
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
 use pyo3::types::{PyDict, PyTuple};
 
+use std::fmt::Error;
 use std::{
     cmp::max,
     mem::{align_of, size_of},
@@ -39,11 +41,19 @@ impl From<Py<PyAny>> for Caller {
 
 pub trait Call {
     fn call(&self, py: Python, base: impl IntoPy<Py<PyTuple>>) -> anyhow::Result<()>;
-    fn process_async(&self, py: Python, hasawait: PyObject) -> Result<PyObject, PyErr>;
+    fn process_async(
+        &self,
+        py: Python,
+        hasawait: PyObject,
+    ) -> Result<(Option<PyObject>, Option<&PyException>), PyErr>;
 }
 
 impl Call for Caller {
-    fn process_async(&self, py: Python, awaitable: PyObject) -> Result<PyObject, PyErr> {
+    fn process_async(
+        &self,
+        py: Python,
+        awaitable: PyObject,
+    ) -> Result<(Option<PyObject>, Option<&PyException>), PyErr> {
         let res = awaitable.call(py, (), None);
         // coroutine = fut.__await__()
 
@@ -86,13 +96,40 @@ impl Call for Caller {
         }
         let res_safe: Result<PyObject, PyErr> = py_result.unwrap_or(Ok(none));
         match res_safe {
-            Ok(result) => Ok(result), // if result has value, stop iteration is not called
+            Ok(result) => {
+                #[cfg(debug_assertions)]
+                info!("result is ok {:#?}", result);
+
+                let o = result.downcast::<PyStopIteration>(py);
+                let asyncok = match o {
+                    Ok(o) => o,
+                    Err(e) => {
+                        info!("{} {}", e.to_string(), result.to_string());
+                        let o = result.downcast::<PyException>(py);
+                        info!("cast into exception {:#?}", o);
+                        match o {
+                            Ok(err) => panic!("{:#?}", err),
+                            Err(ohno) => panic!("{:#?}", ohno),
+                        }
+                    }
+                };
+
+                #[cfg(debug_assertions)]
+                info!("{}", asyncok);
+
+                // let err: Result<PyStopAsyncIteration, PyErr> = result.to_object(py).convert(py);
+                // PyStopAsyncIteration::from(result.to_object(py));
+                let value = result.getattr(py, "value");
+                info!("result is ok {:#?}", result);
+
+                Ok((Some(result), None))
+            } // if result has value, stop iteration is not called
             Err(e) => {
                 info!("ERR E {:#?}", e);
                 let v = e.value(py).to_object(py);
                 // stop iteration
                 info!("ERR E {:#?}", v);
-                Ok(v) // PyNone can be returned so we unwrap
+                Ok((Some(v), None)) // PyNone can be returned so we unwrap
             }
         }
     }
@@ -108,7 +145,19 @@ impl Call for Caller {
         let hasawait = awa.getattr(py, "__await__");
 
         let hasawait = match hasawait {
-            Ok(toawait) => self.process_async(py, toawait),
+            Ok(toawait) => {
+                let asyncres = self.process_async(py, toawait);
+                match asyncres {
+                    Ok((result, exception)) => {
+                        if exception.is_some() {
+                            eprintln!("{:#?}", exception);
+                            // return Result::Err("oh no");
+                        }
+                        Ok(result.unwrap())
+                    }
+                    Err(runtime_err) => Err(runtime_err),
+                }
+            }
             Err(_e) => Ok(awa),
         };
         #[cfg(debug_assertions)]

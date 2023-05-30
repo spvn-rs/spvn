@@ -18,6 +18,8 @@ crate-type = ["rlib"]
 
 [dependencies]
 bytes = { workspace = true }
+bytes-expand = "0.4.12"
+pyo3-asyncio = { workspace = true }
 colored = { workspace = true }
 
 spvn_caller = {path = "../spvn_caller"}

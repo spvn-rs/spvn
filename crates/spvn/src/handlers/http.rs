@@ -4,11 +4,13 @@ use std::{
 };
 
 use bytes::Bytes;
+use bytes_expand::BytesMut;
 use colored::Colorize;
-// use cpython::{prepare_freethreaded_python, _detail::ffi::PyObject};
-use pyo3::{prelude::*, types::IntoPyDict};
-
+use log::info;
+use pyo3::prelude::*;
+use pyo3::{exceptions::*, types::PyBytes};
 // use cpython::{py_class, PyBytes, PyDict, PyNone, PyResult, Python};
+use crate::handlers::tasks::Scheduler;
 use futures::lock::Mutex;
 use futures::Future;
 use http_body::Full;
@@ -17,28 +19,42 @@ use hyper::{body::Body as IncomingBody, Request, Response};
 use pyo3::types::PyDict;
 use spvn_caller::service::caller::Call;
 use spvn_caller::service::caller::SyncSafeCaller;
-use spvn_cfg::{asgi_from_request, ASGIResponse, ASGIType};
+use spvn_cfg::{
+    asgi_from_request, ASGIResponse, ASGIResponsePyDict, ASGIType, InvalidationRationale,
+};
 use spvn_serde::ToPy;
 use std::collections::HashMap;
 use std::marker::Send;
 use std::sync::Arc;
 use tower_service::Service;
-
 pub enum StateKeys {
     HTTPResponseBody,
     HTTPResponseStart,
-    ResponseBody,
 }
 
-type State = Arc<Mutex<HashMap<StateKeys, Bytes>>>;
+type State = Arc<Mutex<HashMap<StateKeys, ASGIResponse>>>;
 type HeaderState = Arc<Mutex<HashMap<StateKeys, Bytes>>>;
+type Sending = Arc<Mutex<BytesMut>>;
 
 type Caller = Arc<Mutex<SyncSafeCaller>>;
 type Ra = Result<http::Response<http_body::Full<bytes::Bytes>>, hyper::Error>;
 
 pub struct Bridge {
-    pub state: State,
-    pub caller: Caller,
+    state: State,
+    caller: Caller,
+    send: Sending,
+    scheduler: Arc<Scheduler>,
+}
+
+impl Bridge {
+    pub fn new(caller: Caller, scheduler: Arc<Scheduler>) -> Self {
+        Self {
+            caller: caller.clone(),
+            state: Arc::new(Mutex::new(HashMap::new())),
+            send: Arc::new(Mutex::new(BytesMut::new())),
+            scheduler: scheduler.clone(),
+        }
+    }
 }
 
 // py_class!(class Receive |py| {
@@ -51,14 +67,65 @@ pub struct Bridge {
 //     }
 // });
 
-// py_class!(class Sender |py| {
-//     data state: State;
+#[pyclass]
+struct Sender {
+    state: State,
+    bytes: Sending,
+}
 
-//     def __call__(&self, dict: PyDict) -> PyResult<PyNone> {
+#[pymethods]
+impl Sender {
+    fn __call__<'a>(
+        &self,
+        py: Python<'a>,
+        dict: ASGIResponsePyDict,
+    ) -> Result<(), InvalidationRationale> {
+        let res: Result<ASGIResponse, InvalidationRationale> = dict.try_into();
+        let received = match res {
+            Ok(res) => res,
+            Err(e) => {
+                #[cfg(debug_assertions)]
+                {
+                    info!("invalid {:#?}", e.message)
+                };
+                return Err(e);
+            }
+        };
+        #[cfg(debug_assertions)]
+        {
+            info!("python sent {:#?}", received)
+        };
+        // let r: Result<&PyAny, PyErr> =
+        //     pyo3_asyncio::tokio::future_into_py(py, async move { Ok(()) });
+        // let fut = match r {
+        //     Ok(fut) => fut,
+        //     Err(e) => {
+        //         return Err(InvalidationRationale {
+        //             message: String::from("couldnt spawn runtime"),
+        //         })
+        //     }
+        // };
 
-//         Ok(PyNone)
-//     }
-// });
+        Ok(())
+    }
+}
+
+#[pyclass]
+struct Receive {
+    bytes: Arc<Mutex<Bytes>>,
+}
+
+#[pymethods]
+impl Receive {
+    fn __call__<'a>(&mut self, py: Python<'a>) -> PyResult<&'a PyBytes> {
+        let b = futures::executor::block_on(self.bytes.lock());
+        #[cfg(debug_assertions)]
+        {
+            info!("python made call to receive bytes")
+        }
+        unsafe { Ok(PyBytes::new(py, b.as_ref())) }
+    }
+}
 
 fn bail() -> Ra {
     Ok(Response::builder()
@@ -96,34 +163,49 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
 
     /// calls the function as a service to an incomping request - core asgi implementation
     fn call(&mut self, req: Request<IncomingBody>) -> Self::Future {
-        async fn mk_response(req: Request<IncomingBody>, caller: Caller) -> Ra {
+        async fn mk_response(
+            req: Request<IncomingBody>,
+            caller: Caller,
+            state: State,
+            bytes: Sending,
+        ) -> Ra {
             let mut called: Option<Result<(), anyhow::Error>> = None;
 
-            let scope = asgi_from_request(&req);
-            {}
-            let s = scope
+            let scope = asgi_from_request(&req)
                 .to(Python::acquire_gil().python())
                 .to_object(Python::acquire_gil().python());
 
             // must be called AFTER setting asgi params so we dont steal the ptr
-            let body_p = body::to_bytes(req.into_body()).await;
+            let body_p: Result<Bytes, hyper::Error> = body::to_bytes(req.into_body()).await;
             let b = match body_p {
                 Ok(bts) => bts,
                 Err(err) => return bail_err(err),
             };
+
+            // this will allow the python fn to receive the bytes in a lazy manner
+            let receiver = Receive {
+                // shove it in an arc & contigious piece of mem
+                bytes: Arc::new(Mutex::new(b)),
+            };
+
+            // this will allow the python fn to send us messages
+            let mut sender = Sender {
+                state,
+                // clone the ref & incr the ref count
+                bytes: bytes.clone(),
+            };
+
             called = Some(
                 caller
                     .lock()
                     .await
-                    .call(Python::acquire_gil().python(), (s, 1, 2)),
+                    .call(Python::acquire_gil().python(), (scope, receiver, sender)),
             );
-            // let fu = Receive::create_instance(Python::acquire_gil().python(), b);
-            // let receive = match fu {
-            //     Ok(receive) => receive,
-            //     Err(err) => return bail_py(err),
-            // };
 
-            // base.set_item( "receive", receive);
+            #[cfg(debug_assertions)]
+            {
+                info!("caller result {:#?}", called)
+            }
 
             match called {
                 Some(Ok(_)) => (),
@@ -134,11 +216,20 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
                 None => return bail(),
             }
 
-            Ok(Response::builder()
-                .body(Full::new(Bytes::from("tada")))
-                .unwrap())
+            let captured = bytes.clone().lock().await.to_vec();
+            let b = Full::new(Bytes::from(captured));
+            #[cfg(debug_assertions)]
+            {
+                info!("caller bytes {:#?} ", b)
+            }
+            Ok(Response::builder().body(b).unwrap())
         }
         let caller = self.caller.clone();
-        Box::pin(mk_response(req, caller))
+        Box::pin(mk_response(
+            req,
+            caller,
+            self.state.clone(),
+            self.send.clone(),
+        ))
     }
 }

@@ -62,7 +62,6 @@ impl Into<Spvn> for SpvnCfg {
     /// must have SPVN_SRV_TARGET env var set
     fn into(self) -> Spvn {
         let scheduler = Arc::new(Scheduler::new());
-
         Spvn {
             cfg: self,
             scheduler,
@@ -83,10 +82,10 @@ impl Spvn {
         if !self.cfg.tls.is_none() {
             startup_message(addr, true);
             let acceptor = TlsAcceptor::from(self.cfg.tls.as_ref().unwrap().clone());
-            Spvn::loop_tls(listener, acceptor, bi).await
+            Spvn::loop_tls(listener, acceptor, bi, self.scheduler.clone()).await
         } else {
             startup_message(addr, false);
-            Spvn::loop_passthru(listener, bi).await
+            Spvn::loop_passthru(listener, bi, self.scheduler.clone()).await
         }
     }
 
@@ -94,21 +93,18 @@ impl Spvn {
         listener: TcpListener,
         acceptor: TlsAcceptor,
         bi: Arc<Mutex<SyncSafeCaller>>,
+        scheduler: Arc<Scheduler>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         loop {
             let (stream, _peer_addr) = listener.accept().await?;
             let acceptor = acceptor.clone();
             let bi = bi.clone();
+            let scheduler = scheduler.clone();
+
             let fut = async move {
                 let stream = acceptor.accept(stream).await?;
                 if let Err(err) = Http::new()
-                    .serve_connection(
-                        stream,
-                        Box::pin(Bridge {
-                            caller: bi.clone(),
-                            state: Arc::new(Mutex::new(HashMap::new())),
-                        }),
-                    )
+                    .serve_connection(stream, Box::pin(Bridge::new(bi.clone(), scheduler.clone())))
                     .await
                 {
                     println!("Failed to serve connection: {:?}", err);
@@ -123,19 +119,15 @@ impl Spvn {
     async fn loop_passthru(
         listener: TcpListener,
         bi: Arc<Mutex<SyncSafeCaller>>,
+        scheduler: Arc<Scheduler>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         loop {
             let (stream, _) = listener.accept().await?;
             let bi = bi.clone();
+            let scheduler = scheduler.clone();
             let fut = async move {
                 if let Err(err) = Http::new()
-                    .serve_connection(
-                        stream,
-                        Box::pin(Bridge {
-                            caller: bi.clone(),
-                            state: Arc::new(Mutex::new(HashMap::new())),
-                        }),
-                    )
+                    .serve_connection(stream, Box::pin(Bridge::new(bi.clone(), scheduler.clone())))
                     .await
                 {
                     println!("Failed to serve connection: {:?}", err);

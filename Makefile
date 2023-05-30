@@ -13,8 +13,7 @@ run:
 		target/debug/spvn
 changelog:
 		git-changelog -o CHANGELOG.md
-		
 .PHONY: vars
 unexport CONDA_PREFIX
-vars:
-        $(MAKE) export PYO3_PYTHON=/Users/joshuaauchincloss/Movies/spvn_pyo3/env/bin/python
+vars: 
+		export PYO3_PYTHON=/Users/joshuaauchincloss/Movies/spvn_pyo3/env/bin/python

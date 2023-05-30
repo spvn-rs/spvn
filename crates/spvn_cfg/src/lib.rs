@@ -1,6 +1,6 @@
 use http::{uri::Scheme, Uri, Version};
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyBytes, PyDict};
 // use axum::{extract::FromRequest, response::Response,};
 // use axum::{
 //     // body::Bytes,
@@ -11,11 +11,13 @@ use pyo3::types::PyDict;
 use bytes::Bytes;
 use hyper::{body::Body as IncomingBody, Request};
 use log::info;
-
+use pyo3::exceptions::*;
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use serde::{Deserialize, Serialize};
 use spvn_serde::ToPy;
-use std::{fs::File, io::BufReader, path::Path, sync::Arc, collections::HashMap};
+use std::cell::{Ref, RefCell};
+use std::fmt::Display;
+use std::{collections::HashMap, fs::File, io::BufReader, path::Path, sync::Arc};
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 
 static SpecVersion: &str = "2.0";
@@ -37,90 +39,125 @@ static AsgiVersion: &str = "2.0";
 
 static ERRFLAG: &str = "___FLAG___";
 
+#[derive(Debug)]
 pub struct ASGIResponse {
     _type: ASGIType,
     body: Option<Bytes>,
     headers: Vec<(String, Vec<u8>)>,
 }
 
-pub struct InvalidationRationale {
-    message: String,
+#[derive(FromPyObject, Debug)]
+pub struct ASGIResponsePyDict<'a> {
+    #[pyo3(item("type"))]
+    _type: Option<String>,
+    #[pyo3(item("body"))]
+    body: Option<&'a PyBytes>,
+    #[pyo3(item("headers"))]
+    headers: Option<Vec<(String, Vec<u8>)>>,
 }
 
-// fn extract_with_invalidation<'a, T: 'a>(
-//     py: Python,
-//     dict: &PyDict,
-//     field: &str,
-// ) -> Result<T, InvalidationRationale>
-// where
-//     T: cpython::FromPyObject<'a>,
-// {
-//     let tp: Option<cpython::PyObject> = dict.get_item(py, "type");
-//     if tp.is_none() {
-//         #[cfg(debug_assertions)]
-//         info!("error extracting field {:#?}", field);
-//         return Err(InvalidationRationale {
-//             message: format!("missing {} field", field),
-//         });
-//     }
+impl<'a> TryInto<ASGIResponse> for ASGIResponsePyDict<'a> {
+    type Error = InvalidationRationale;
 
-//     let _typ: Result<T, PyErr> = tp.unwrap().into();
-//     // .extract(py);
-//     match _typ {
-//         Ok(val) => Ok(val),
-//         Err(r) => {
-//             #[cfg(debug_assertions)]
-//             info!("error casting to type {:#?}", r);
-//             Err(InvalidationRationale {
-//                 message: format!("invalid type for field {}", field),
-//             })
-//         }
-//     }
-// }
+    fn try_into(self) -> Result<ASGIResponse, Self::Error> {
+        if self._type.is_none() {
+            #[cfg(debug_assertions)]
+            {
+                info!("type provided is none")
+            }
+            return Err(InvalidationRationale {
+                message: String::from(r#"missing "type" field"#),
+            });
+        }
+        let _type = match ASGIType::from(self._type.unwrap()) {
+            Ok(typ) => typ,
+            Err(_) => {
+                #[cfg(debug_assertions)]
+                {
+                    info!("invalid asgi type provided")
+                }
+                return Err(InvalidationRationale {
+                    message: String::from("invalid asgi type provided"),
+                });
+            }
+        };
 
-// impl ASGIResponse {
-//     pub fn from_pydict(py: Python, dict: &PyDict) -> Result<ASGIResponse, InvalidationRationale> {
-//         let _typ: Result<String, InvalidationRationale> =
-//             extract_with_invalidation(py, dict, "type");
-//         let _typ_s = match _typ {
-//             Ok(v) => v,
-//             Err(e) => return Err(e),
-//         };
-//         let _type = match ASGIType::from(_typ_s) {
-//             Ok(typ) => typ,
-//             Err(_) => {
-//                 return Err(InvalidationRationale {
-//                     message: String::from("invalid asgi type provided"),
-//                 })
-//             }
-//         };
+        let mut body: Option<Bytes> = None;
 
-//         let mut body: Option<Bytes> = None;
-//         if _type == ASGIType::HTTPResponseBody {
-//             let _body: Result<&PyBytes, InvalidationRationale> =
-//                 extract_with_invalidation(py, dict, "body");
-//             let _body_b = match _body {
-//                 Ok(v) => v,
-//                 Err(e) => return Err(e),
-//             };
-//             let body_pt = _body_b.data(py);
-//             body = Some(Bytes::from(body_pt))
-//         }
+        if _type == ASGIType::HTTPResponseBody {
+            if self.body.is_none() {
+                #[cfg(debug_assertions)]
+                {
+                    info!("no body provided")
+                }
+                return Err(InvalidationRationale {
+                    message: String::from(r#"No body provided for "http.response.body" type"#),
+                });
+            }
+            let bts = self.body.unwrap().as_bytes();
+            let v: Vec<u8> = Vec::from(bts);
+            let b_sr: Bytes = Bytes::from(v);
+            body = Some(b_sr);
+        };
 
-//         Ok(ASGIResponse {
-//             _type,
-//             body,
-//             headers: vec![],
-//         })
-//     }
-// }
+        let mut headers: Vec<(std::string::String, Vec<u8>)> = vec![];
+        if !self.headers.is_none() {
+            headers = self.headers.unwrap();
+        }
+
+        Ok(ASGIResponse {
+            _type,
+            body,
+            headers,
+        })
+    }
+}
+
+pub struct InvalidationRationale {
+    pub message: String,
+}
+impl std::convert::From<InvalidationRationale> for PyErr {
+    fn from(err: InvalidationRationale) -> PyErr {
+        PyValueError::new_err(err.message.to_string())
+    }
+}
+
+fn extract_with_invalidation<'a, T: 'a>(
+    dict: &Ref<&'a PyDict>,
+    field: &str,
+) -> Result<T, InvalidationRationale>
+where
+    T: FromPyObject<'a>,
+{
+    let tp: Option<&PyAny> = dict.get_item("type");
+    if tp.is_none() {
+        #[cfg(debug_assertions)]
+        info!("error extracting field {:#?}", field);
+        return Err(InvalidationRationale {
+            message: format!("missing {} field", field),
+        });
+    }
+
+    let _typ: Result<T, PyErr> = tp.unwrap().extract();
+    // .extract(py);
+    match _typ {
+        Ok(val) => Ok(val),
+        Err(r) => {
+            #[cfg(debug_assertions)]
+            info!("error casting to type {:#?}", r);
+            Err(InvalidationRationale {
+                message: format!("invalid type for field {}", field),
+            })
+        }
+    }
+}
 
 const ASGIImpl: fn() -> ASGIVersions = || ASGIVersions {
     spec_version: String::from(SpecVersion),
     version: String::from(AsgiVersion),
 };
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum ASGIType {
     // lifecycle
     LifecycleStartup,
@@ -344,7 +381,6 @@ impl<'a> ToPy<'a, &'a PyDict> for ASGIScope {
         dict
     }
 }
-
 
 // #[async_trait]
 // impl<S, B> FromRequest<S, B> for ASGIScope
