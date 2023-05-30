@@ -1,15 +1,13 @@
+use crate::state::Polling;
 use crate::{
     state::{Sending, State},
     ASGIResponse, ASGIResponsePyDict, InvalidationRationale,
 };
 use bytes::Bytes;
+
 use futures::lock::Mutex;
 use log::info;
-use pyo3::{
-    prelude::*,
-    types::{PyBytes},
-    Python,
-};
+use pyo3::{exceptions::*, prelude::*, types::PyBytes, Python};
 use std::sync::Arc;
 
 #[pyclass]
@@ -53,22 +51,5 @@ impl Sender {
         // };
 
         Ok(())
-    }
-}
-
-#[pyclass]
-struct Receive {
-    bytes: Arc<Mutex<Bytes>>,
-}
-
-#[pymethods]
-impl Receive {
-    fn __call__<'a>(&mut self, py: Python<'a>) -> PyResult<&'a PyBytes> {
-        let b = futures::executor::block_on(self.bytes.lock());
-        #[cfg(debug_assertions)]
-        {
-            info!("python made call to receive bytes")
-        }
-        unsafe { Ok(PyBytes::new(py, b.as_ref())) }
     }
 }

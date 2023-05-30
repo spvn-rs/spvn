@@ -6,7 +6,7 @@
 
 # spvn
 
-spvn offers rust asgi bindings for python. it is in progress, contributions & development are welcome
+spvn is a work in progress project which seeks to bring rust asgi bindings into python. it is in progress, contributions & development are welcome
 
 ## Project Status
 
@@ -33,12 +33,42 @@ Roughly in order of priority
   - [🚧] Lifecycle activation for caller objects
 - [🚧] App scheduler
 
+  - [✅] Injectable `awaitables` (rust ptr -> python ptr)
   - [✅] Async threadsafe
   - [✅] Delayed py-fn call
   - [🚧] Scheduler into py
 
 - [🚧] Live reloader
 - [🚧] Websockets
+
+## Rationale & Goals
+
+- Relieve limits by python in networking applications
+  - The goal is not to create the 'fastest' ASGI server, but reliable ASGI services which don't drop calls when subject to extreme concurrency
+- Safe python threadpooling unmanaged by GIL runtime
+
+### Claims
+
+The upper bounds of python concurrency are not <i>really</i> production ready
+
+#### Rationale
+
+- Uvicorn drops requests & stalls on IO > 7500 concurrent clients
+- Hypercorn drops requests & stalls on IO > 7500 concurrent clients
+
+In both, we must horizontally scale to accomodate these limits in our systems. This is further accompanied by essentially a second layer of IO bound processes, which are evidently unable to maintain highly concurrent environments
+
+#### Proposed
+
+Delegation of connection multiplex, stream, and IO processes into Rust, and autoinjection at runtime following standard ASGI protocol.
+
+### Preliminary Tests
+
+- perf has test files containing basic benchmarks
+  - hypercorn @ 1 worker = 683402 ns
+  - spvn -> py @ 1 worker = 2444489 ns
+
+This is slow, but is a <i>very</i> preliminary implementation of the caller protocol using sync processes. The intented scope is to bring methods into async runtimes, allowing for concurrent continuous calls without dropping connections or locks due to IO bound processes.
 
 ## Developing
 

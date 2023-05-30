@@ -3,6 +3,7 @@ pub mod implementation;
 pub mod sender;
 pub mod receiver;
 pub mod state;
+pub mod call_async;
 use bytes::Bytes;
 
 

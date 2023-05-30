@@ -21,3 +21,12 @@ lint:
 		black ./**/**.py &&
 		ruff check . --fix &&
 		cargo fmt --fix
+
+
+
+
+#### perf testing things ###
+uvicorn_env:
+		uvicorn dotest.foo:app --port 9009
+hypercorn_env:
+		hypercorn dotest.baz:app --bind localhost:9010

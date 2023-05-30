@@ -8,6 +8,7 @@ use bytes_expand::BytesMut;
 use colored::Colorize;
 use log::info;
 use pyo3::prelude::*;
+use tokio::sync::{mpsc::channel, Mutex as TokMut};
 
 // use cpython::{py_class, PyBytes, PyDict, PyNone, PyResult, Python};
 use crate::handlers::tasks::Scheduler;
@@ -19,9 +20,9 @@ use hyper::{body::Body as IncomingBody, Request, Response};
 
 use spvn_caller::service::caller::Call;
 use spvn_caller::service::caller::SyncSafeCaller;
-use spvn_serde::asgi_scope::asgi_from_request;
 use spvn_serde::state::{Sending, State};
-use spvn_serde::{receiver::Receive, sender::Sender};
+use spvn_serde::{asgi_scope::asgi_from_request, state::Polling};
+use spvn_serde::{call_async::AsyncMethod, receiver::Receive, sender::Sender};
 
 use std::collections::HashMap;
 use std::marker::Send;
@@ -35,15 +36,19 @@ pub struct Bridge {
     state: State,
     caller: Caller,
     send: Sending,
+    watch: Polling,
+    // ptr only
     scheduler: Arc<Scheduler>,
 }
 
 impl Bridge {
     pub fn new(caller: Caller, scheduler: Arc<Scheduler>) -> Self {
+        let (tx, rx) = channel::<Bytes>(3);
         Self {
             caller: caller.clone(),
             state: Arc::new(Mutex::new(HashMap::new())),
-            send: Arc::new(Mutex::new(BytesMut::new())),
+            send: Arc::new(Mutex::new(tx)),
+            watch: Arc::new(Mutex::new(rx)),
             scheduler: scheduler.clone(),
         }
     }
@@ -89,60 +94,52 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             req: Request<IncomingBody>,
             caller: Caller,
             state: State,
-            bytes: Sending,
+            send: Sending,
+            watch: Polling,
         ) -> Ra {
-            let mut called: Option<Result<(), anyhow::Error>> = None;
-
             let scope = asgi_from_request(&req).to_object(Python::acquire_gil().python());
-
-            // must be called AFTER setting asgi params so we dont steal the ptr
-            let body_p: Result<Bytes, hyper::Error> = body::to_bytes(req.into_body()).await;
-            let b = match body_p {
-                Ok(bts) => bts,
-                Err(err) => return bail_err(err),
-            };
-
-            // this will allow the python fn to receive the bytes in a lazy manner
-            let receiver = Receive {
-                // shove it in an arc & contigious piece of mem
-                bytes: Arc::new(Mutex::new(b)),
-            };
 
             // this will allow the python fn to send us messages
             let sender = Sender {
                 state,
                 // clone the ref & incr the ref count
-                bytes: bytes.clone(),
+                bytes: send,
             };
 
-            called = Some(
-                caller
-                    .lock()
-                    .await
-                    .call(Python::acquire_gil().python(), (scope, receiver, sender)),
-            );
+            // must be called AFTER setting asgi params so we dont steal the ptr
+            // let body_p: Result<Bytes, hyper::Error> = body::to_bytes(req.into_body()).await;
 
-            #[cfg(debug_assertions)]
-            {
-                info!("caller result {:#?}", called)
-            }
-
-            match called {
-                Some(Ok(_)) => (),
-                Some(Err(e)) => {
+            // this will allow the python fn to receive the bytes in a lazy manner
+            let mut body = body::to_bytes(req.into_body()).await;
+            let b = match body {
+                Ok(bts) => bts,
+                Err(err) => return bail_err(err),
+            };
+            let receiver = Receive {
+                shot: watch.clone(),
+            };
+            match caller.lock().await.call(
+                Python::acquire_gil().python(),
+                (
+                    scope,
+                    receiver,
+                    sender,
+                    AsyncMethod {
+                        poll: Poll::Ready(false),
+                    },
+                ),
+            ) {
+                Ok(_) => (),
+                Err(e) => {
                     eprintln!("an error occured setting calling the handler - {:#?}", e);
                     return bail();
                 }
-                None => return bail(),
             }
 
-            let captured = bytes.clone().lock().await.to_vec();
-            let b = Full::new(Bytes::from(captured));
-            #[cfg(debug_assertions)]
-            {
-                info!("caller bytes {:#?} ", b)
-            }
-            Ok(Response::builder().body(b).unwrap())
+            // let b = Full::new(Bytes::from(captured));
+            Ok(Response::builder()
+                .body(Full::new(Bytes::from("captured")))
+                .unwrap())
         }
         let caller = self.caller.clone();
         Box::pin(mk_response(
@@ -150,6 +147,7 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             caller,
             self.state.clone(),
             self.send.clone(),
+            self.watch.clone(),
         ))
     }
 }

@@ -10,7 +10,14 @@ pub enum StateKeys {
     HTTPResponseBody,
     HTTPResponseStart,
 }
+use tokio::sync::{
+    mpsc::{Sender, Receiver},
+
+};
+
+
 
 pub type State = Arc<Mutex<HashMap<StateKeys, ASGIResponse>>>;
 pub type HeaderState = Arc<Mutex<HashMap<StateKeys, Bytes>>>;
-pub type Sending = Arc<Mutex<BytesMut>>;
+pub type Sending = Arc<Mutex<Sender<Bytes>>>;
+pub type Polling = Arc<Mutex<Receiver<Bytes>>>;

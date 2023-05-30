@@ -17,24 +17,3 @@ pub async fn spawn_socket(addr: &str) -> UdpSocket {
         Ok(listener) => return listener,
     }
 }
-
-// fn init(listener: TcpListener, protocol: Arc<Http>) {
-//     // let protocol = Arc::new(Http::new());
-//     loop {
-//         let stream = poll_fn(|cx| Pin::new(&mut listener).poll_accept(cx))
-//             .await
-//             .unwrap()
-//             .unwrap();
-
-//         let acceptor = acceptor.clone();
-//         let protocol = protocol.clone();
-
-//         let svc = MakeService::<_, Request<hyper::Body>>::make_service(&mut app, &stream);
-
-//         tokio::spawn(async move {
-//             if let Ok(stream) = acceptor.accept(stream).await {
-//                 let _ = protocol.serve_connection(stream, svc.await.unwrap()).await;
-//             }
-//         });
-//     }
-// }
