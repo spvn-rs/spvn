@@ -4,6 +4,7 @@
 __pycache__/
 .pytest_cache/
 *.py[cod]
+*.ipynb
 
 # C extensions
 *.so
@@ -74,4 +75,5 @@ docs/_build/
 
 # Pyenv
 .python-version
+test.ipynb
 test.ipynb
