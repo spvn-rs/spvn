@@ -15,7 +15,6 @@ use crate::handlers::http::Bridge;
 
 use futures::lock::Mutex;
 
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;

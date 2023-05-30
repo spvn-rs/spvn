@@ -8,7 +8,7 @@ use bytes_expand::BytesMut;
 use colored::Colorize;
 use log::info;
 use pyo3::prelude::*;
-use pyo3::{exceptions::*, types::PyBytes};
+use pyo3::types::PyBytes;
 // use cpython::{py_class, PyBytes, PyDict, PyNone, PyResult, Python};
 use crate::handlers::tasks::Scheduler;
 use futures::lock::Mutex;
@@ -16,12 +16,10 @@ use futures::Future;
 use http_body::Full;
 use hyper::body;
 use hyper::{body::Body as IncomingBody, Request, Response};
-use pyo3::types::PyDict;
+
 use spvn_caller::service::caller::Call;
 use spvn_caller::service::caller::SyncSafeCaller;
-use spvn_cfg::{
-    asgi_from_request, ASGIResponse, ASGIResponsePyDict, ASGIType, InvalidationRationale,
-};
+use spvn_cfg::{asgi_from_request, ASGIResponse, ASGIResponsePyDict, InvalidationRationale};
 use spvn_serde::ToPy;
 use std::collections::HashMap;
 use std::marker::Send;
@@ -77,7 +75,7 @@ struct Sender {
 impl Sender {
     fn __call__<'a>(
         &self,
-        py: Python<'a>,
+        _py: Python<'a>,
         dict: ASGIResponsePyDict,
     ) -> Result<(), InvalidationRationale> {
         let res: Result<ASGIResponse, InvalidationRationale> = dict.try_into();
@@ -189,7 +187,7 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             };
 
             // this will allow the python fn to send us messages
-            let mut sender = Sender {
+            let sender = Sender {
                 state,
                 // clone the ref & incr the ref count
                 bytes: bytes.clone(),

@@ -28,7 +28,7 @@ spvn_cfg = {path = "../spvn_cfg"}
 
 anyhow = {workspace = true}
 tokio-rustls = "0.23"
-async-trait = {workspace = true} 
+async-trait = {workspace = true}
 log = { workspace = true }
 pyo3 = {workspace = true, features = []}
 

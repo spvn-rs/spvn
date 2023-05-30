@@ -15,9 +15,9 @@ use pyo3::exceptions::*;
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use serde::{Deserialize, Serialize};
 use spvn_serde::ToPy;
-use std::cell::{Ref, RefCell};
-use std::fmt::Display;
-use std::{collections::HashMap, fs::File, io::BufReader, path::Path, sync::Arc};
+use std::cell::Ref;
+
+use std::{fs::File, io::BufReader, path::Path, sync::Arc};
 use tokio_rustls::rustls::{Certificate, PrivateKey, ServerConfig};
 
 static SpecVersion: &str = "2.0";
@@ -339,7 +339,7 @@ pub fn asgi_from_request(req: &Request<IncomingBody>) -> ASGIScope {
 struct PObjRef(PyObject);
 
 impl IntoPy<PyObject> for PObjRef {
-    fn into_py(self, py: Python) -> PyObject {
+    fn into_py(self, _py: Python) -> PyObject {
         self.0
     }
 }
@@ -357,7 +357,7 @@ impl<'a> ToPy<'a, &'a PyDict> for ASGIVersions {
     }
 }
 
-fn set_dict_item_feedback<K: ToPyObject, V: ToPyObject>(py: Python, dict: &PyDict, k: K, v: V) {
+fn set_dict_item_feedback<K: ToPyObject, V: ToPyObject>(_py: Python, dict: &PyDict, k: K, v: V) {
     let _res = dict.set_item(k, v);
 }
 

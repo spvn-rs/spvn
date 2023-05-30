@@ -1,5 +1,5 @@
 async def app(scope=None, receive=None, send=None):
-    print("from python",scope, send, receive)
+    print("from python", scope, send, receive)
     print("init")
 
     # print(awa)
@@ -7,6 +7,8 @@ async def app(scope=None, receive=None, send=None):
     print("request", received)
     # awa = send({'type': 'http.response.start', 'headers': [], 'body': None})
 
-    awa = send({'type': 'http.response.body', 'headers': (), 'body': b'okok'})
+    awa = send({"type": "http.response.body", "headers": [("a", b"b")], "body": b"okok"})
     return 1
+
+
 # print("init")

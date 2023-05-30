@@ -74,3 +74,4 @@ docs/_build/
 
 # Pyenv
 .python-version
+test.ipynb

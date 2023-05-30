@@ -4,22 +4,118 @@ build-backend = "maturin"
 
 [project]
 name = "spvn"
-requires-python = ">=3.7"
-classifiers = [
-    "Programming Language :: Rust",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+description = "rust asgi bindings for spic & span apis"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "joshua-auchincloss", email = "joshua.auchincloss@proton.me" },
 ]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Typing :: Typed",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Software Development",
+  "Operating System :: OS Independent",
+  "Programming Language :: Rust",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+  "License :: OSI Approved :: MIT License",
+]
+
+
+[project.urls]
+Documentation = "https://github.com/joshua-auchincloss/spvn#readme"
+Issues = "https://github.com/joshua-auchincloss/spvn/issues"
+Source = "https://github.com/joshua-auchincloss/spvn"
 
 [project.scripts]
 spvn = "spvn:main"
 
 [tool.maturin]
-python-source = "python"
+python-source = "src"
 manifest-path = "crates/spvn_py/Cargo.toml"
 module-name = "spvn"
 strip = true
 exclude = [
 
 ]
+
+[tool.black]
+target-version = ["py37"]
+line-length = 120
+skip-string-normalization = true
+
+[tool.ruff]
+target-version = "py37"
+line-length = 120
+select = [
+  "A",
+  "ARG",
+  "B",
+  "C",
+  "DTZ",
+  "E",
+  "EM",
+  "F",
+  "FBT",
+  "I",
+  "ICN",
+  "ISC",
+  "N",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "Q",
+  "RUF",
+  "S",
+  "T",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+ignore = [
+  # Allow non-abstract empty methods in abstract base classes
+  "B027",
+  # Allow boolean positional values in function calls, like `dict.get(... True)`
+  "FBT003",
+  # Ignore complexity
+  "C901",
+  "A003",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "FBT002",
+  "FBT001",
+  "TID252",
+]
+unfixable = [
+  # Don't touch unused imports
+  "F401",
+]
+
+exclude = [
+"examples/**/*",
+"**/__main__.py",
+"**/__init__.py",
+"*test*",
+]
+
+[tool.ruff.isort]
+known-first-party = ["spvn"]
+
+[tool.ruff.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]

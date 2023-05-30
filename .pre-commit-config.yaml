@@ -1,0 +1,43 @@
+repos:
+
+### python
+- repo: https://github.com/psf/black
+  rev: '23.3.0'
+  hooks:
+    - id: black
+-   repo: https://github.com/adamchainz/blacken-docs
+    rev: "1.13.0"  # replace with latest tag on GitHub
+    hooks:
+    -   id: blacken-docs
+        additional_dependencies:
+        - black==22.12.0
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: 'v4.4.0'
+  hooks:
+    - id: trailing-whitespace
+    - id: end-of-file-fixer
+    - id: debug-statements
+    - id: check-toml
+    - id: check-executables-have-shebangs
+    - id: pretty-format-json
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: 'v0.0.270'
+  hooks:
+    - id: ruff
+      args:
+        - src
+
+### rust
+# -   repo: https://github.com/doublify/pre-commit-rust
+#     rev: 'v1.0'
+#     hooks:
+#     -   id: fmt
+#     -   id: cargo-check
+
+### general
+- repo: https://github.com/compilerla/conventional-pre-commit
+  rev: 'v2.2.0'
+  hooks:
+    - id: conventional-pre-commit
+      stages: [commit-msg]
+      args: []

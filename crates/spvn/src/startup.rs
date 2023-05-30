@@ -14,7 +14,6 @@ pub fn startup_message(addr: SocketAddr, tls: bool) {
         addr_fmt = format!("http://{}", addr_fmt);
     }
 
-    
     let len_a = addr_fmt.len();
     let s = 34 - (len_a / 2);
     let pat_s = spc.repeat(s);

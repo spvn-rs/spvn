@@ -6,18 +6,11 @@ use clap::{ArgAction, Args};
 use colored::Colorize;
 use core::clone::Clone;
 
-
 use log::info;
 use notify::event;
 use notify::Watcher;
 
-
-
-
-
-
 use tokio::runtime::Builder;
-
 
 use std::sync::Arc;
 
@@ -175,7 +168,10 @@ impl Into<SpvnCfg> for Arguments {
             SecScheme::TLSv13 => tls = when(),
         }
 
-        SpvnCfg { tls, n_threads: self.n_threads }
+        SpvnCfg {
+            tls,
+            n_threads: self.n_threads,
+        }
     }
 }
 
@@ -191,9 +187,7 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
 
     let tgt: &str = arguments.target.as_str();
     env::set_var("SPVN_SRV_TARGET", tgt);
-   
-   
-   
+
     if arguments.watch {
         let mut watcher = notify::recommended_watcher(
             |res: std::result::Result<notify::Event, notify::Error>| match res {

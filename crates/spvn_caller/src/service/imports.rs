@@ -7,10 +7,8 @@ use core::result::Result::Ok;
 use libc::c_void;
 use log::{error, info};
 
-use pyo3::ffi::{PyObject as Py3FFIObj, PySys_GetObject, Py_None};
+use pyo3::ffi::{PyObject as Py3FFIObj, PySys_GetObject};
 use pyo3::prelude::*;
-use pyo3::types::IntoPyDict;
-use pyo3::types::PyDict;
 
 use crate::service::caller;
 
@@ -135,7 +133,7 @@ fn init_module<'a>(py: Python<'a>, name: &str, path: &str) -> &'a PyModule {
 
 #[cfg(test)]
 mod tests {
-    use crate::service::imports::resolve_import;
+
     // use crate::Python;
 
     // #[test]

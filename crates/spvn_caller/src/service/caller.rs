@@ -2,15 +2,14 @@
 // use cpython::{PyErr};
 // use cpython::{NoArgs, ObjectProtocol};
 // use cpython::{PyDict, PyObject, Python, _detail::ffi::PyAsyncMethods};
-use async_trait::async_trait;
+
 use log::info;
-use pyo3::exceptions::{asyncio::*, *};
+use pyo3::exceptions::*;
 use pyo3::ffi::Py_None;
 use pyo3::prelude::*;
-use pyo3::types::IntoPyDict;
-use pyo3::types::{PyDict, PyTuple};
 
-use std::fmt::Error;
+use pyo3::types::PyTuple;
+
 use std::{
     cmp::max,
     mem::{align_of, size_of},
@@ -66,7 +65,7 @@ impl Call for Caller {
         };
 
         let it = awaitable.getattr(py, "__next__");
-        let mut await_result = match it {
+        let await_result = match it {
             Ok(succ) => succ,             // <coroutine_wrapper>
             Err(e) => panic!("{:#?}", e), // some condition we havent caught
         };
@@ -119,7 +118,7 @@ impl Call for Caller {
 
                 // let err: Result<PyStopAsyncIteration, PyErr> = result.to_object(py).convert(py);
                 // PyStopAsyncIteration::from(result.to_object(py));
-                let value = result.getattr(py, "value");
+                let _value = result.getattr(py, "value");
                 info!("result is ok {:#?}", result);
 
                 Ok((Some(result), None))

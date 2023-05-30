@@ -37,4 +37,3 @@ colored = { workspace = true}
 
 
 bytes = {workspace = true}
-

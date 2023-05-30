@@ -1,12 +1,5 @@
-use pyo3::types::PyDict;
-use pyo3::Python;
 
-use std::{
-    cmp::max,
-    mem::{align_of, size_of},
-    ops::{Deref, DerefMut},
-    ptr,
-};
+se pyo3::Python;
 
 pub trait ToPy<'a, T> {
     fn to(self, py: Python<'a>) -> T;

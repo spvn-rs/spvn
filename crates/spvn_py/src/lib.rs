@@ -1,7 +1,6 @@
 use bytes;
 use pyo3::{prelude::*, types::PyBytes};
 use simple_logger::SimpleLogger;
-use spvn_cfg::ASGIType;
 
 #[pyclass]
 struct AsgiResponse {
@@ -16,7 +15,7 @@ fn new_asgi_response(
     body: Option<&PyBytes>,
     headers: Vec<(String, Vec<u8>)>,
 ) -> AsgiResponse {
-    let bts = body.unwrap().as_bytes();
+    let _bts = body.unwrap().as_bytes();
     // let body = bytes::Bytes::from(bts);
 
     AsgiResponse {

@@ -41,4 +41,3 @@ lto = "fat"
 
 [profile.dev]
 rpath = true
-

@@ -6,15 +6,13 @@ use crate::service::imports::resolve_import;
 // use cpython::{
 //     ObjectProtocol, PyDict, Python,
 // };
-use pyo3::ffi::Py_None;
+
 use pyo3::prelude::*;
-use pyo3::types::IntoPyDict;
-use pyo3::types::PyDict;
 
 use log::info;
+use pyo3::types::PyTuple;
 use service::caller::{Call, SyncSafeCaller};
 use syncpool::prelude::*;
-use pyo3::types::PyTuple;
 pub struct PySpawn {
     pool: Option<SyncPool<SyncSafeCaller>>,
 }
