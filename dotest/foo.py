@@ -1,14 +1,9 @@
 async def app(scope=None, receive=None, send=None):
     print("from python", scope, send, receive)
-    print("init")
-
-    # print(awa)
     received = receive()
     print("request", received)
-    # awa = send({'type': 'http.response.start', 'headers': [], 'body': None})
-
-    awa = send({"type": "http.response.body", "headers": [("a", b"b")], "body": b"okok"})
+    awa1 = send({'type': 'http.response.start', 'headers': [], 'body': None})
+    print("awaitable-1", awa1)
+    awa2 = send({"type": "http.response.body", "headers": [("a", b"b")], "body": b"okok"})
+    print("awaitable-2", awa2)
     return 1
-
-
-# print("init")

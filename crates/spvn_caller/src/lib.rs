@@ -147,9 +147,8 @@ mod tests {
     // use cpython::PyDict;
     // use cpython::{py_fn, PyNone, PyResult, Python};
     use log::info;
-    use spvn_cfg::ASGIScope;
+    use spvn_serde::asgi_scope::ASGIScope;
     use spvn_dev::init_test_hooks;
-    use spvn_serde::ToPy;
     use std::env;
 
     fn common_init_foo() {

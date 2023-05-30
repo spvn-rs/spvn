@@ -18,7 +18,7 @@ crate-type = ["rlib"]
 
 [dependencies]
 bytes = { workspace = true }
-bytes-expand = "0.4.12"
+bytes-expand = { workspace = true }
 pyo3-asyncio = { workspace = true }
 colored = { workspace = true }
 
@@ -36,7 +36,7 @@ http-body = { version = "0.4.5" }
 tokio = { workspace = true, features = ["sync", "macros"] }
 hyper = { workspace = true, features = ["full"] }
 http = { workspace = true }
-futures = { version = "0.3.28" }
+futures = { workspace = true }
 tower = {workspace = true, features = ["make", "timeout"]}
 tower-layer = { version = "0.3.2" }
 tower-service = { version = "0.3.2" }

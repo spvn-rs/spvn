@@ -16,6 +16,8 @@ description = "asgi rust bindings"
 
 [workspace.dependencies]
 bytes = "1"
+bytes-expand = "0.4.12"
+futures = { version = "0.3.28" }
 
 pyo3 = { version = "0.18.3" }
 pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }

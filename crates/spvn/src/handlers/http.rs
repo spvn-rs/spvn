@@ -8,7 +8,7 @@ use bytes_expand::BytesMut;
 use colored::Colorize;
 use log::info;
 use pyo3::prelude::*;
-use pyo3::types::PyBytes;
+
 // use cpython::{py_class, PyBytes, PyDict, PyNone, PyResult, Python};
 use crate::handlers::tasks::Scheduler;
 use futures::lock::Mutex;
@@ -19,20 +19,14 @@ use hyper::{body::Body as IncomingBody, Request, Response};
 
 use spvn_caller::service::caller::Call;
 use spvn_caller::service::caller::SyncSafeCaller;
-use spvn_cfg::{asgi_from_request, ASGIResponse, ASGIResponsePyDict, InvalidationRationale};
-use spvn_serde::ToPy;
+use spvn_serde::asgi_scope::asgi_from_request;
+use spvn_serde::state::{Sending, State};
+use spvn_serde::{receiver::Receive, sender::Sender};
+
 use std::collections::HashMap;
 use std::marker::Send;
 use std::sync::Arc;
 use tower_service::Service;
-pub enum StateKeys {
-    HTTPResponseBody,
-    HTTPResponseStart,
-}
-
-type State = Arc<Mutex<HashMap<StateKeys, ASGIResponse>>>;
-type HeaderState = Arc<Mutex<HashMap<StateKeys, Bytes>>>;
-type Sending = Arc<Mutex<BytesMut>>;
 
 type Caller = Arc<Mutex<SyncSafeCaller>>;
 type Ra = Result<http::Response<http_body::Full<bytes::Bytes>>, hyper::Error>;
@@ -52,76 +46,6 @@ impl Bridge {
             send: Arc::new(Mutex::new(BytesMut::new())),
             scheduler: scheduler.clone(),
         }
-    }
-}
-
-// py_class!(class Receive |py| {
-//     data bts: Bytes;
-
-//     def __call__(&self) -> PyResult<PyBytes> {
-//         let v: &[u8] = self.bts(py).as_ref();
-//         let pb = PyBytes::new(Python::acquire_gil().python(), v);
-//         Ok(pb)
-//     }
-// });
-
-#[pyclass]
-struct Sender {
-    state: State,
-    bytes: Sending,
-}
-
-#[pymethods]
-impl Sender {
-    fn __call__<'a>(
-        &self,
-        _py: Python<'a>,
-        dict: ASGIResponsePyDict,
-    ) -> Result<(), InvalidationRationale> {
-        let res: Result<ASGIResponse, InvalidationRationale> = dict.try_into();
-        let received = match res {
-            Ok(res) => res,
-            Err(e) => {
-                #[cfg(debug_assertions)]
-                {
-                    info!("invalid {:#?}", e.message)
-                };
-                return Err(e);
-            }
-        };
-        #[cfg(debug_assertions)]
-        {
-            info!("python sent {:#?}", received)
-        };
-        // let r: Result<&PyAny, PyErr> =
-        //     pyo3_asyncio::tokio::future_into_py(py, async move { Ok(()) });
-        // let fut = match r {
-        //     Ok(fut) => fut,
-        //     Err(e) => {
-        //         return Err(InvalidationRationale {
-        //             message: String::from("couldnt spawn runtime"),
-        //         })
-        //     }
-        // };
-
-        Ok(())
-    }
-}
-
-#[pyclass]
-struct Receive {
-    bytes: Arc<Mutex<Bytes>>,
-}
-
-#[pymethods]
-impl Receive {
-    fn __call__<'a>(&mut self, py: Python<'a>) -> PyResult<&'a PyBytes> {
-        let b = futures::executor::block_on(self.bytes.lock());
-        #[cfg(debug_assertions)]
-        {
-            info!("python made call to receive bytes")
-        }
-        unsafe { Ok(PyBytes::new(py, b.as_ref())) }
     }
 }
 
@@ -169,9 +93,7 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
         ) -> Ra {
             let mut called: Option<Result<(), anyhow::Error>> = None;
 
-            let scope = asgi_from_request(&req)
-                .to(Python::acquire_gil().python())
-                .to_object(Python::acquire_gil().python());
+            let scope = asgi_from_request(&req).to_object(Python::acquire_gil().python());
 
             // must be called AFTER setting asgi params so we dont steal the ptr
             let body_p: Result<Bytes, hyper::Error> = body::to_bytes(req.into_body()).await;

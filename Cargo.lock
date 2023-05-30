@@ -1273,7 +1273,13 @@ dependencies = [
 name = "spvn_serde"
 version = "0.1.0"
 dependencies = [
+ "bytes",
+ "bytes-expand",
+ "futures",
+ "http",
+ "hyper",
  "libc",
+ "log",
  "pyo3",
  "serde",
  "serde_json",
