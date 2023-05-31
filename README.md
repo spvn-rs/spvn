@@ -8,6 +8,45 @@
 
 spvn is a work in progress project which seeks to bring rust asgi bindings into python. it is in progress, contributions & development are welcome
 
+## ASGI State Management
+
+```mermaid
+
+stateDiagram-v2
+    Request--> Bytes
+    Bytes --> PyDelayed(receive)
+    PyDelayed(receive) --> PyFuture(received)
+    PyFuture(received) --> PythonPtr(bytes)
+
+    PythonPtr(bytes) --> ASGI
+    PythonPtr(received) --> ASGI
+    PythonPtr(scope) --> ASGI
+
+    Request --> asgi_from_request
+    asgi_from_request --> PythonPtr(scope)
+
+    Send --> SendReceiver
+    Send --> PyDelayed(send)
+    PyDelayed(send) --> PyFuture(sent)
+    PyFuture(sent) --> None
+
+
+    PyDelayed(scope) --> Caller.call
+    PyDelayed(send) --> Caller.call
+    PyDelayed(receive) --> Caller.call
+
+    Caller.call --> await
+
+    ASGI --> SendReceiver
+
+    SendReceiver --> ReceiveStart
+    SendReceiver --> ReceiveBody
+
+    ReceiveStart --> Response
+    ReceiveBody --> Response
+
+```
+
 ## Project Status
 
 Roughly in order of priority
