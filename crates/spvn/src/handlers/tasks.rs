@@ -36,8 +36,7 @@ impl CallRunner {
         while let Some(message) = self.rx.recv().await {
             #[cfg(debug_assertions)]
             info!("message {:#?}", message.sched_time);
-
-            (message.fu)(Python::acquire_gil().python());
+            Python::with_gil(|py| (message.fu)(py));
         }
         #[cfg(debug_assertions)]
         info!("oh no done watching");

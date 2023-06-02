@@ -7,9 +7,8 @@ use crate::service::imports::resolve_import;
 //     ObjectProtocol, PyDict, Python,
 // };
 
-
 use async_trait::async_trait;
-use pyo3::{prelude::*};
+use pyo3::prelude::*;
 use std::{
     cmp::max,
     mem::{align_of, size_of},
@@ -20,9 +19,8 @@ use std::{
 use deadpool::managed;
 use log::info;
 
-use service::caller::{SyncSafeCaller};
+use service::caller::SyncSafeCaller;
 use std::marker::PhantomData;
-
 
 pub struct PySpawn {
     pool: Option<SyncSafeCaller>,
@@ -149,9 +147,10 @@ impl PySpawn {
             Ok(st) => st,
             Err(e) => panic!("lost env var at runtime {:#?}", e),
         };
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let module = resolve_import(py, tgt.as_str());
+        let module = Python::with_gil(|py| resolve_import(py, tgt.as_str()));
+        // Python::with_gil(f)
+        // let py = gil.python();
+        // let module = ;
         let caller = match module {
             Ok(asgi_app) => asgi_app,
             Err(_) => panic!("panicked"),

@@ -21,8 +21,7 @@ futures = { version = "0.3.28" }
 crossbeam = "0.8"
 deadpool = "0.9.5"
 
-pyo3 = { version = "0.18.3" }
-pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }
+pyo3 = { version = "0.19.0" }
 colored = { version = "2.0.0" }
 serde = { version = "1.0", features = ["derive"] }
 tokio = {version = "1.9", features = ["sync", "rt"]}

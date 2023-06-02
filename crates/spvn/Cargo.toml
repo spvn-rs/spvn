@@ -25,7 +25,6 @@ spvn_cfg = {path = "../spvn_cfg"}
 bytes = { workspace = true }
 deadpool = { workspace = true }
 bytes-expand = { workspace = true }
-pyo3-asyncio = { workspace = true }
 colored = { workspace = true }
 crossbeam = {workspace = true}
 
@@ -45,4 +44,3 @@ futures = { workspace = true }
 tower = {workspace = true, features = ["make", "timeout"]}
 tower-layer = { version = "0.3.2" }
 tower-service = { version = "0.3.2" }
-parking_lot = "0.12.1"

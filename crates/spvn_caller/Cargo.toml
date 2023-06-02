@@ -18,7 +18,6 @@ license = "MIT"
 pyo3 = {workspace = true, features = []}
 futures = {workspace = true, features = []}
 
-
 deadpool = { workspace = true }
 spvn_cfg = { path = "../spvn_cfg" }
 spvn_serde = { path = "../spvn_serde" }

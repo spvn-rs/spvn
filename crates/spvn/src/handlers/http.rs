@@ -9,16 +9,16 @@ use colored::Colorize;
 // use crossbeam::channel;
 use log::info;
 use pyo3::prelude::*;
-use tokio::sync::{mpsc::channel};
+use tokio::sync::mpsc::channel;
 // use cpython::{py_class, PyBytes, PyDict, PyNone, PyResult, Python};
 use crate::handlers::tasks::Scheduler;
+use futures::lock::Mutex;
 use futures::Future;
-use futures::{lock::Mutex};
 use http_body::Full;
 use hyper::body;
 use hyper::{body::Body as IncomingBody, Request, Response};
 
-use spvn_caller::{service::caller::Call};
+use spvn_caller::service::caller::Call;
 use spvn_caller::{service::caller::SyncSafeCaller, PyPool};
 use spvn_serde::{asgi_scope::asgi_from_request, state::Polling};
 use spvn_serde::{
@@ -104,7 +104,9 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             send: Sending,
             watch: Polling,
         ) -> Ra {
-            let scope = asgi_from_request(&req).to_object(Python::acquire_gil().python());
+            let scope = Python::with_gil(|py| {
+                asgi_from_request(&req).to_object(py)
+            });
 
             let (_tx, rx) = oneshot::<bool>();
             // this will allow the python fn to send us messages
@@ -145,18 +147,19 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
                         Err(e) => info!("error during call {:#?}", e),
                     };
                 }
+
                 caller = caller.get()
                  => {
                     match caller {
                         Ok(call) => {
-                            let res = call.call(
-                            Python::acquire_gil().python(),
-                            (
-                                scope,
-                                receiver,
-                                sender,
-                                PyFuture::new(poll, Box::new(rx_bdy)),
-                            ));
+                            let res = Python::with_gil( |py| call.call(
+                                py,
+                                (
+                                    scope,
+                                    receiver,
+                                    sender,
+                                    PyFuture::new(poll, Box::new(rx_bdy)),
+                                )) ) ;
                             info!("{:#?}", res);
                             ()
                         },
