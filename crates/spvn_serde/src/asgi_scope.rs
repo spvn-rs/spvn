@@ -1,13 +1,12 @@
 use crate::implementation::set_dict_item_feedback;
-use crate::implementation::{ASGIVersions, ASGIImpl};
+use crate::implementation::{ASGIVersions, ASGI_IMPLEMENTATION};
 use bytes::Bytes;
 use http::{uri::Scheme, Uri, Version};
 use hyper::{body::Body as IncomingBody, Request};
+use pyo3::types::PyDict;
 use pyo3::Python;
 use pyo3::ToPyObject;
 use serde::{Deserialize, Serialize};
-use pyo3::types::PyDict;
-
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct ASGIScope {
@@ -90,7 +89,7 @@ pub fn asgi_from_request(req: &Request<IncomingBody>) -> ASGIScope {
 
     ASGIScope {
         _type: String::from("http"),
-        asgi: ASGIImpl(),
+        asgi: ASGI_IMPLEMENTATION(),
         http_version,
         method,
         scheme,

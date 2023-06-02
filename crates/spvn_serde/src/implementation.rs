@@ -28,7 +28,7 @@ pub fn set_dict_item_feedback<K: ToPyObject, V: ToPyObject>(
     let _res = dict.set_item(k, v);
 }
 
-pub const ASGIImpl: fn() -> ASGIVersions = || -> ASGIVersions {
+pub const ASGI_IMPLEMENTATION: fn() -> ASGIVersions = || -> ASGIVersions {
     ASGIVersions {
         spec_version: String::from(SpecVersion),
         version: String::from(AsgiVersion),

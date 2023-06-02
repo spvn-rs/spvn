@@ -7,14 +7,25 @@ use crate::service::imports::resolve_import;
 //     ObjectProtocol, PyDict, Python,
 // };
 
-use pyo3::prelude::*;
 
+use async_trait::async_trait;
+use pyo3::{prelude::*};
+use std::{
+    cmp::max,
+    mem::{align_of, size_of},
+    ops::Deref,
+    ptr,
+};
+
+use deadpool::managed;
 use log::info;
-use pyo3::types::PyTuple;
-use service::caller::{Call, SyncSafeCaller};
-use syncpool::prelude::*;
+
+use service::caller::{SyncSafeCaller};
+use std::marker::PhantomData;
+
+
 pub struct PySpawn {
-    pool: Option<SyncPool<SyncSafeCaller>>,
+    pool: Option<SyncSafeCaller>,
 }
 
 // fn make_sync<'life0, 'async_trait, T>(
@@ -91,24 +102,44 @@ pub struct PySpawn {
 //     }
 // }
 
+pub struct PyManager {}
+
+#[async_trait]
+impl managed::Manager for PyManager {
+    type Type = SyncSafeCaller;
+    type Error = anyhow::Error;
+
+    async fn create(&self) -> Result<Self::Type, Self::Error> {
+        Ok(PySpawn::gen())
+    }
+
+    async fn recycle(&self, _: &mut Self::Type) -> managed::RecycleResult<Self::Error> {
+        Ok(())
+    }
+}
+
+pub type PyPool = managed::Pool<PyManager>;
+
+impl PyManager {
+    pub fn new(_size: usize) -> PyPool {
+        let mgr: PyManager = PyManager {};
+        let pool: managed::Pool<PyManager> = PyPool::builder(mgr).build().expect("oh no");
+        pool
+    }
+}
+
 impl PySpawn {
     pub fn new() -> Self {
         PySpawn { pool: None }
     }
-
-    pub fn call(self, base: impl IntoPy<Py<PyTuple>>) {
-        let gil = Python::acquire_gil();
-        let ini_result = self
-            .pool
-            .expect("call before caller acquired")
-            .get()
-            .deref_mut()
-            .call(gil.python(), base);
-        // .call(, serialize);
-
-        #[cfg(debug_assertions)]
-        info!("{:#?}", ini_result)
-    }
+    // pub async fn call(self, base: impl IntoPy<Py<PyTuple>>) -> anyhow::Result<()> {
+    //     self
+    //         .pool
+    //         .expect("call before caller acquired")
+    //         .get()
+    //         .deref_mut()
+    //         .call(Python::acquire_gil().python(), base)
+    // }
     pub fn gen() -> SyncSafeCaller {
         let target = env::var("SPVN_SRV_TARGET");
         #[cfg(debug_assertions)]
@@ -133,12 +164,55 @@ pub trait Spawn {
     fn spawn(&mut self, size: usize);
 }
 
-impl Spawn for PySpawn {
-    fn spawn(&mut self, size: usize) {
-        self.pool
-            .replace(SyncPool::with_builder_and_size(size, PySpawn::gen));
+// impl Spawn for PySpawn {
+// fn spawn(&mut self, size: usize) {
+//     self.pool
+//         .replace(SyncPool::with_builder_and_size(size, PySpawn::gen));
+// }
+// }
+
+#[derive(Clone, Copy)]
+pub struct PySpawnRef {
+    ptr: std::ptr::NonNull<PySpawn>,
+    _data: PhantomData<PySpawn>,
+}
+
+impl PySpawnRef {
+    pub fn new(spawn: PySpawn) -> Self {
+        let mut memptr: *mut PySpawn = ptr::null_mut();
+        unsafe {
+            let ret = libc::posix_memalign(
+                (&mut memptr as *mut *mut PySpawn).cast(),
+                max(align_of::<PySpawn>(), size_of::<usize>()),
+                size_of::<PySpawn>(),
+            );
+            assert_eq!(ret, 0, "Failed to allocate or invalid alignment");
+        };
+        let ptr = { ptr::NonNull::new(memptr).expect("posix_memalign should have returned 0") };
+        unsafe {
+            ptr.as_ptr().write(spawn);
+        }
+        Self {
+            ptr,
+            _data: PhantomData::default(),
+        }
     }
 }
+
+impl Deref for PySpawnRef {
+    type Target = PySpawn;
+    fn deref(&self) -> &Self::Target {
+        unsafe { self.ptr.as_ref() }
+    }
+}
+
+impl DerefMut for PySpawnRef {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { self.ptr.as_mut() }
+    }
+}
+
+unsafe impl Send for PySpawnRef {}
 
 #[cfg(test)]
 #[allow(unused_must_use, unused_imports)]
@@ -147,8 +221,8 @@ mod tests {
     // use cpython::PyDict;
     // use cpython::{py_fn, PyNone, PyResult, Python};
     use log::info;
-    use spvn_serde::asgi_scope::ASGIScope;
     use spvn_dev::init_test_hooks;
+    use spvn_serde::asgi_scope::ASGIScope;
     use std::env;
 
     fn common_init_foo() {
@@ -167,8 +241,8 @@ mod tests {
     fn test_call_sync() {
         common_init_bar();
         std::thread::spawn(move || {
-            let mut caller = PySpawn::new();
-            caller.spawn(1);
+            let _caller = PySpawn::new();
+            // caller.spawn(1);
             // caller.call(|py| {
             //     let kwargs = PyDict::new(py);
             //     kwargs
@@ -180,8 +254,8 @@ mod tests {
     fn test_call_async() {
         common_init_foo();
         std::thread::spawn(move || {
-            let mut caller = PySpawn::new();
-            caller.spawn(1);
+            let _caller = PySpawn::new();
+            // caller.spawn(1);
             let st = std::time::Instant::now();
             // caller.call(|py| {
             //     // let scope = ASGIScope::mock();

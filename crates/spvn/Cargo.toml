@@ -17,17 +17,22 @@ crate-type = ["rlib"]
 
 
 [dependencies]
-bytes = { workspace = true }
-bytes-expand = { workspace = true }
-pyo3-asyncio = { workspace = true }
-colored = { workspace = true }
 
 spvn_caller = {path = "../spvn_caller"}
 spvn_serde = {path = "../spvn_serde"}
 spvn_cfg = {path = "../spvn_cfg"}
 
+bytes = { workspace = true }
+deadpool = { workspace = true }
+bytes-expand = { workspace = true }
+pyo3-asyncio = { workspace = true }
+colored = { workspace = true }
+crossbeam = {workspace = true}
+
+
 anyhow = {workspace = true}
 tokio-rustls = "0.23"
+tokio-util = "0.7.8"
 async-trait = {workspace = true}
 log = { workspace = true }
 pyo3 = {workspace = true, features = []}

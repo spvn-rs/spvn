@@ -1,5 +1,5 @@
 [package]
-name = "spvn_log"
+name = "spvn_macros"
 version = { workspace = true }
 publish = false
 edition = { workspace = true }
@@ -12,3 +12,6 @@ crate-type = ["proc-macro"]
 simple_logger = { workspace = true }
 log = { workspace = true }
 colored = { workspace = true }
+syn = "1.0"
+quote = "1.0"
+pyo3 = {workspace = true}

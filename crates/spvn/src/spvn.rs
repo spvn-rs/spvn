@@ -2,8 +2,8 @@ use crate::handlers::tasks::{Schedule, Scheduler};
 
 use hyper::server::conn::Http;
 use log::info;
-use spvn_caller::service::caller::SyncSafeCaller;
-use spvn_caller::PySpawn;
+
+use spvn_caller::{PyManager};
 
 use crate::startup::startup_message;
 
@@ -13,7 +13,7 @@ use tokio_rustls::rustls::ServerConfig;
 
 use crate::handlers::http::Bridge;
 
-use futures::lock::Mutex;
+
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -76,7 +76,7 @@ impl Spvn {
         // let mut caller = PySpawn::new();
         // caller.spawn(self.cfg.n_threads);
 
-        let bi = Arc::new(Mutex::new(PySpawn::gen()));
+        let bi: Arc<deadpool::managed::Pool<PyManager>> = Arc::new(PyManager::new(2));
 
         if !self.cfg.tls.is_none() {
             startup_message(addr, true);
@@ -91,7 +91,7 @@ impl Spvn {
     async fn loop_tls(
         listener: TcpListener,
         acceptor: TlsAcceptor,
-        bi: Arc<Mutex<SyncSafeCaller>>,
+        bi: Arc<deadpool::managed::Pool<PyManager>>,
         scheduler: Arc<Scheduler>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         loop {
@@ -117,7 +117,7 @@ impl Spvn {
 
     async fn loop_passthru(
         listener: TcpListener,
-        bi: Arc<Mutex<SyncSafeCaller>>,
+        bi: Arc<deadpool::managed::Pool<PyManager>>,
         scheduler: Arc<Scheduler>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         loop {
@@ -126,7 +126,7 @@ impl Spvn {
             let scheduler = scheduler.clone();
             let fut = async move {
                 if let Err(err) = Http::new()
-                    .serve_connection(stream, Box::pin(Bridge::new(bi.clone(), scheduler.clone())))
+                    .serve_connection(stream, Box::pin(Bridge::new(bi, scheduler.clone())))
                     .await
                 {
                     println!("Failed to serve connection: {:?}", err);

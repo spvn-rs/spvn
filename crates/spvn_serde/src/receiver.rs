@@ -1,13 +1,13 @@
-use crate::call_async::AsyncMethod;
+
 use crate::state::Polling;
-use bytes::Bytes;
+
 use futures::executor;
-use futures::lock::Mutex;
+
 use log::info;
 use pyo3::prelude::{pyclass, pymethods};
 use pyo3::{exceptions::*, prelude::*};
-use pyo3::{prelude::*, types::PyBytes, Python};
-use std::sync::Arc;
+use pyo3::{types::PyBytes, Python};
+
 
 #[pyclass]
 /// This class receives the raw bts from the request and feeds into python's interpreter

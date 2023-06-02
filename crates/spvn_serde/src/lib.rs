@@ -1,20 +1,13 @@
 pub mod asgi_scope;
-pub mod implementation;
-pub mod sender;
-pub mod receiver;
-pub mod state;
 pub mod call_async;
+pub mod implementation;
+pub mod receiver;
+pub mod sender;
+pub mod state;
 use bytes::Bytes;
 
-
 use log::info;
-use pyo3::{
-    exceptions::*,
-    prelude::*,
-    types::{PyBytes},
-};
-
-
+use pyo3::{exceptions::*, prelude::*, types::PyBytes};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum ASGIType {

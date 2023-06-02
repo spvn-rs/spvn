@@ -1,26 +1,40 @@
-use crate::state::Polling;
+
+
 use crate::{
     state::{Sending, State},
     ASGIResponse, ASGIResponsePyDict, InvalidationRationale,
 };
-use bytes::Bytes;
 
-use futures::lock::Mutex;
+
+
 use log::info;
-use pyo3::{exceptions::*, prelude::*, types::PyBytes, Python};
+use pyo3::{prelude::*, Python};
 use std::sync::Arc;
+
+use tokio::sync::oneshot::Receiver;
 
 #[pyclass]
 pub struct Sender {
     pub state: State,
     pub bytes: Sending,
+    // pub mtd: fn() -> IterAwait,
+}
+
+impl Sender {
+    pub fn new(bytes: Sending, state: State, _rx: Arc<Receiver<bool>>) -> Self {
+        Self {
+            state,
+            bytes,
+            // mtd: || IterAwait::new(Poll::Ready(true), rx),
+        }
+    }
 }
 
 #[pymethods]
 impl Sender {
     // TODO: turn async
     fn __call__<'a>(
-        &self,
+        _slf: PyRef<'_, Self>,
         _py: Python<'a>,
         dict: ASGIResponsePyDict,
     ) -> Result<(), InvalidationRationale> {
@@ -39,17 +53,7 @@ impl Sender {
         {
             info!("python sent {:#?}", received)
         };
-        // let r: Result<&PyAny, PyErr> =
-        //     pyo3_asyncio::tokio::future_into_py(py, async move { Ok(()) });
-        // let fut = match r {
-        //     Ok(fut) => fut,
-        //     Err(e) => {
-        //         return Err(InvalidationRationale {
-        //             message: String::from("couldnt spawn runtime"),
-        //         })
-        //     }
-        // };
-
+        // Ok((slf.mtd)().into_py(py))
         Ok(())
     }
 }

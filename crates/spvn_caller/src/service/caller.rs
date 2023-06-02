@@ -12,12 +12,29 @@ use pyo3::types::PyTuple;
 
 use std::{
     cmp::max,
+    future::Future,
     mem::{align_of, size_of},
     ops::{Deref, DerefMut},
     ptr,
+    task::Poll,
 };
 
 use std::marker::PhantomData;
+
+pub struct CallFuture<'a, T> {
+    iterating: bool,
+    data: Option<&'a T>,
+}
+
+impl<'a, T> Future for CallFuture<'a, T> {
+    type Output = &'a T;
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        Poll::Ready(self.data.unwrap())
+    }
+}
 
 pub struct Caller {
     pub app: Box<PyObject>,
@@ -53,11 +70,8 @@ impl Call for Caller {
         py: Python,
         awaitable: PyObject,
     ) -> Result<(Option<PyObject>, Option<&PyException>), PyErr> {
-        let res = awaitable.call(py, (), None);
         // coroutine = fut.__await__()
-
-        #[cfg(debug_assertions)]
-        log::info!("await result {:#?}", res);
+        let res = awaitable.call(py, (), None);
 
         let awaitable = match res {
             Ok(succ) => succ,             // coroutine
@@ -82,8 +96,8 @@ impl Call for Caller {
                 }
             };
 
-            #[cfg(debug_assertions)]
-            info!("loop {}", n)
+            // #[cfg(debug_assertions)]
+            // info!("loop {}", n)
         }
 
         #[cfg(debug_assertions)]
@@ -211,3 +225,4 @@ impl DerefMut for SyncSafeCaller {
 }
 
 unsafe impl Send for SyncSafeCaller {}
+unsafe impl Sync for SyncSafeCaller {}
