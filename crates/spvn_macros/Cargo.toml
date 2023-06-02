@@ -10,8 +10,9 @@ crate-type = ["proc-macro"]
 
 [dependencies]
 simple_logger = { workspace = true }
-log = { workspace = true }
+log = { workspace = true, features = ["max_level_error"] }
 colored = { workspace = true }
 syn = "1.0"
 quote = "1.0"
 pyo3 = {workspace = true}
+crossbeam = {workspace = true}

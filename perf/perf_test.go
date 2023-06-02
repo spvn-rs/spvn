@@ -21,10 +21,10 @@ func bmASGIConcurrency(b *testing.B, tgt string) {
 // 	bmASGIConcurrency(b, "http://localhost:9009")
 // }
 
-func BenchmarkHypercorn(b *testing.B) {
-	bmASGIConcurrency(b, "http://localhost:9010")
-}
-
-// func BenchmarkBootstrap(b *testing.B) {
-// 	bmASGIConcurrency(b, "http://localhost:8000")
+// func BenchmarkHypercorn(b *testing.B) {
+// 	bmASGIConcurrency(b, "http://localhost:9010")
 // }
+
+func BenchmarkBootstrap(b *testing.B) {
+	bmASGIConcurrency(b, "http://localhost:8000")
+}

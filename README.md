@@ -104,10 +104,10 @@ Delegation of connection multiplex, stream, and IO processes into Rust, and auto
 ### Preliminary Tests
 
 - perf has test files containing basic benchmarks
-  - hypercorn @ 1 worker = 683402 ns
-  - spvn -> py @ 1 worker = 2444489 ns
+  - hypercorn @ 1 worker = 683402-788307 ns
+  - spvn -> py @ 1 worker = 395430-727142 ns
 
-This is slow, but is a <i>very</i> preliminary implementation of the caller protocol using sync processes. The intented scope is to bring methods into async runtimes, allowing for concurrent continuous calls without dropping connections or locks due to IO bound processes.
+This is still too slow, but is a <i>very</i> preliminary implementation of the caller protocol using sync processes. The intented scope is to bring methods into async runtimes, allowing for concurrent continuous calls without dropping connections or locks due to IO bound processes.
 
 ## Developing
 

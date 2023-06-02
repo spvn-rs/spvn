@@ -19,5 +19,5 @@ serde_json = "1.0"
 tokio = {version = "1.9", features = ["sync"]}
 async-trait = { workspace = true}
 simple_logger = { workspace = true }
-log = { workspace = true }
+log = { workspace = true, features = ["max_level_error"] }
 anyhow = { workspace = true }

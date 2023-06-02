@@ -12,7 +12,7 @@ crate-type = ["rlib"]
 http = { workspace = true }
 hyper = { workspace = true, features = ["full"] }
 
-log = { workspace = true }
+log = { workspace = true, features = ["max_level_error"] }
 bytes = { workspace = true }
 bytes-expand = { workspace = true }
 pyo3 = {workspace = true}

@@ -33,7 +33,7 @@ anyhow = {workspace = true}
 tokio-rustls = "0.23"
 tokio-util = "0.7.8"
 async-trait = {workspace = true}
-log = { workspace = true }
+log = { workspace = true, features = ["max_level_error"] }
 pyo3 = {workspace = true, features = []}
 
 http-body = { version = "0.4.5" }

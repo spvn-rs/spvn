@@ -1294,6 +1294,7 @@ name = "spvn_macros"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "crossbeam",
  "log",
  "pyo3",
  "quote",

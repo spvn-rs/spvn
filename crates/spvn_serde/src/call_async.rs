@@ -1,5 +1,3 @@
-
-
 use std::time::Duration;
 use std::time::Instant;
 
@@ -11,12 +9,7 @@ use pyo3::exceptions::*;
 use pyo3::prelude::*;
 use pyo3::pyclass::IterNextOutput;
 
-
-
-
 /// Implementation of python.futures.Future in rust.
-///
-///
 ///
 /// A callable which in python acts as the following:
 /// ```py
@@ -71,7 +64,7 @@ impl PyFuture {
             info!("pending");
             return pyo3::pyclass::IterNextOutput::Yield(slf);
         }
-        let v = match slf.val.recv() {
+        let v = match slf.val.recv_timeout(slf.poller_deadline) {
             Ok(val) => val,
             Err(_e) => unsafe {
                 return pyo3::pyclass::IterNextOutput::Return(
@@ -96,33 +89,3 @@ impl PyFuture {
         fut
     }
 }
-
-/// A callable which in python acts as the following:
-/// ```py
-/// def my_scope(async_method_bootstrap: AsyncMethod):
-///     fut = async_method_bootstrap() # <- <coroutine object at ...>
-///     # print(fut.__await__()) -> iterable(Iter)
-///     await fut # -> 0
-/// ```
-///
-/// if [`Poll`] is pending, we send `Iter(1)` (signal to loop again), else, we increment
-/// the inner iterator (which only has len 1) and signal the call as finished
-///
-///
-///
-fn abc() {}
-// #[pyclass]
-// pub struct AsyncMethod {
-//     pub poll: fn() -> std::task::Poll<bool>,
-//     pub val: Receiver<bool>,
-// }
-
-// #[pymethods]
-// impl AsyncMethod {
-//     fn __call__(&self) -> Result<PyFuture, PyErr> {
-//         // let v = self.poll.ta
-//         // let v = self.poll.
-
-//         Ok(PyFuture::new(self.poll.clone(), self.val))
-//     }
-// }
