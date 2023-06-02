@@ -104,9 +104,7 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             send: Sending,
             watch: Polling,
         ) -> Ra {
-            let scope = Python::with_gil(|py| {
-                asgi_from_request(&req).to_object(py)
-            });
+            let scope = Python::with_gil(|py| asgi_from_request(&req).to_object(py));
 
             let (_tx, rx) = oneshot::<bool>();
             // this will allow the python fn to send us messages
@@ -128,48 +126,52 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             let _token = CancellationToken::new();
             let poll = || Poll::Ready(true);
 
-            tokio::select! {
-                body = body::to_bytes(req.into_body()) => {
-                    let _b = match body {
-                        Ok(bts) => bts,
-                        Err(err) => {
-                            return bail_err(err)
-                        }
-                    };
-                    let re = tx_bdy.send(true);
-                    info!("sending data");
-                    #[cfg(debug_assertions)]
-                    {
-                        info!("response from send {:#?}", re);
-                    }
-                    match re {
-                        Ok(_) => (),
-                        Err(e) => info!("error during call {:#?}", e),
-                    };
+            let join_body: tokio::task::JoinHandle<_> = tokio::task::spawn(async move {
+                let body = body::to_bytes(req.into_body()).await;
+                let _b = match body {
+                    Ok(bts) => bts,
+                    Err(err) => return Err(err),
+                };
+                let re = tx_bdy.send(true);
+                info!("sending data");
+                #[cfg(debug_assertions)]
+                {
+                    info!("response from send {:#?}", re);
                 }
+                match re {
+                    Ok(_) => (),
+                    Err(e) => info!("error during call {:#?}", e),
+                };
+                Ok(())
+            });
 
-                caller = caller.get()
-                 => {
-                    match caller {
-                        Ok(call) => {
-                            let res = Python::with_gil( |py| call.call(
+            let join_caller = tokio::task::spawn(async move {
+                let caller = caller.get().await;
+                match caller {
+                    Ok(call) => {
+                        let res = Python::with_gil(|py| {
+                            call.call(
                                 py,
                                 (
                                     scope,
                                     receiver,
                                     sender,
                                     PyFuture::new(poll, Box::new(rx_bdy)),
-                                )) ) ;
-                            info!("{:#?}", res);
-                            ()
-                        },
-                        Err(e) => {
-                            eprintln!("an error occured setting calling the handler - {:#?}", e);
-                            return bail();
-                        }
-                    };
-                }
-            };
+                                ),
+                            )
+                        });
+                        info!("{:#?}", res);
+                        ()
+                    }
+                    Err(e) => {
+                        eprintln!("an error occured setting calling the handler - {:#?}", e);
+                        return Err(e);
+                    }
+                };
+                Ok(())
+            });
+
+            let (body_r, caller_rr) = tokio::join!(join_body, join_caller,);
             // let b = Full::new(Bytes::from(captured));
             Ok(Response::builder()
                 .body(Full::new(Bytes::from("captured")))

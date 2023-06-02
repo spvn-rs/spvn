@@ -1,5 +1,5 @@
 async def app(scope=None, receive=None, send=None, rcv=None):
-    # print("received awaitable", await rcv())
+    print("received awaitable", await rcv())
     # print("received awaitable", await receive())
 
     # received = await receive()
