@@ -27,7 +27,6 @@ prof-bin:
 			--target dotest.foo:app
 
 
-
 #### perf testing things ###
 uvicorn_env:
 		uvicorn dotest.foo:app --port 9009
