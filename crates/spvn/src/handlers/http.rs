@@ -107,7 +107,6 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
                     state.insert(Instant::now(), resp.to_owned());
                 }
             });
-            eprintln!("call ");
 
             let sender = Sender::new(tx_bdy);
 
@@ -117,6 +116,7 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             // todo: handle
             let _token = CancellationToken::new();
             let asgi = asgi_from_request(&req);
+
             let body = body::to_bytes(req.into_body()).await;
             let _b = match body {
                 Ok(bts) => bts,

@@ -18,6 +18,7 @@ crate-type = ["rlib"]
 
 [dependencies]
 
+spvn_listen = {path = "../spvn_listen"}
 spvn_caller = {path = "../spvn_caller"}
 spvn_serde = {path = "../spvn_serde"}
 spvn_cfg = {path = "../spvn_cfg"}
@@ -32,6 +33,7 @@ crossbeam = {workspace = true}
 anyhow = {workspace = true}
 tokio-rustls = "0.23"
 tokio-util = "0.7.8"
+tokio-stream = { version = "0.1.14", features = ["net"] }
 async-trait = {workspace = true}
 log = { workspace = true }
 pyo3 = {workspace = true, features = []}
@@ -44,3 +46,4 @@ futures = { workspace = true }
 tower = {workspace = true, features = ["make", "timeout"]}
 tower-layer = { version = "0.3.2" }
 tower-service = { version = "0.3.2" }
+socket2 = { workspace = true , features = ["all"]}

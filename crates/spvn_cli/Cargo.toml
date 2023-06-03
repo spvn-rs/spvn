@@ -19,6 +19,7 @@ spvn_serde = { path = "../spvn_serde"  }
 spvn_listen = { path = "../spvn_listen" }
 
 
+num_cpus = "1.0"
 simple_logger = { workspace = true }
 log = { workspace = true  }
 clap = { workspace = true, features = ["derive", "env"] }

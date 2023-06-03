@@ -19,4 +19,4 @@ anyhow = { workspace = true }
 hyper = { workspace = true, features = ["full"] }
 tower = { workspace = true, features = ["make"] }
 axum = { workspace = true, features = [] }
-axum-core = { workspace = true }
+socket2 = { workspace = true }

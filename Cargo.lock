@@ -583,7 +583,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2",
+ "socket2 0.4.9",
  "tokio",
  "tower-service",
  "tracing",
@@ -1159,6 +1159,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "socket2"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2538b18701741680e0322a2302176d3253a35388e2e62f172f64f4f16605f877"
+dependencies = [
+ "libc",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
 name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1181,11 +1191,14 @@ dependencies = [
  "hyper",
  "log",
  "pyo3",
+ "socket2 0.5.3",
  "spvn_caller",
  "spvn_cfg",
+ "spvn_listen",
  "spvn_serde",
  "tokio",
  "tokio-rustls",
+ "tokio-stream",
  "tokio-util",
  "tower",
  "tower-layer",
@@ -1246,6 +1259,7 @@ dependencies = [
  "colored",
  "log",
  "notify",
+ "num_cpus",
  "pyo3",
  "simple_logger",
  "spvn",
@@ -1283,8 +1297,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
- "axum-core",
  "hyper",
+ "socket2 0.5.3",
  "tokio",
  "tower",
 ]
@@ -1427,7 +1441,7 @@ dependencies = [
  "mio",
  "num_cpus",
  "pin-project-lite",
- "socket2",
+ "socket2 0.4.9",
  "tokio-macros",
  "windows-sys 0.48.0",
 ]
@@ -1452,6 +1466,17 @@ dependencies = [
  "rustls",
  "tokio",
  "webpki",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "397c988d37662c7dda6d2208364a706264bf3d6138b11d436cbac0ad38832842"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]

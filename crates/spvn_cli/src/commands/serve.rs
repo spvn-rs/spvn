@@ -219,16 +219,25 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
         #[cfg(debug_assertions)]
         info!("{:#?}", bi)
     }
-
     let rt = Builder::new_multi_thread().enable_all().build().unwrap();
-    // rt.shutdown_background()
-    rt.block_on(async {
-        let cfg: SpvnCfg = arguments.into();
+
+    rt.block_on(async move {
+        let cfg: SpvnCfg = arguments.clone().into();
         let mut own: Spvn = cfg.into();
-        own.service().await;
-        // own.schedule(|py| {
-        //     py.eval("print('called')", None, None);
-        // });
+        own.service(0).await
+        // let mut handlers = Vec::new();
+        // for i in 0..num_cpus::get() {
+        //     let cfg: SpvnCfg = arguments.clone().into();
+        //     let mut own: Spvn = cfg.into();
+        //     own.service(i).await
+        //     // let h = std::thread::spawn(move || {
+        //     //     tokio::spawn(async move { own.service(i).await })
+        //     // });
+        //     // handlers.push(h);
+        // }
+        // for h in handlers {
+        //     h.join().unwrap();
+        // }
     });
 
     // let mut caller = PySpawn::new();
