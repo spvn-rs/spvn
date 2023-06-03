@@ -1,16 +1,13 @@
 use bytes::Bytes;
 
 use crate::call_async::IntoPyFuture;
-use crossbeam::channel;
+
 use log::info;
+use pyo3::prelude::*;
 use pyo3::prelude::{pyclass, pymethods};
 use pyo3::Python;
-use pyo3::{exceptions::*, prelude::*};
-use std::time::Duration;
-use std::time::Instant;
 
 use pyo3::pyclass::IterNextOutput;
-use tokio::task::JoinHandle;
 
 #[pyclass]
 pub struct PySyncBodyReceiver {

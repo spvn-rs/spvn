@@ -1,8 +1,8 @@
 use pyo3::{prelude::Python, types::PyDict, ToPyObject};
 use serde::{Deserialize, Serialize};
 
-static SpecVersion: &str = "2.0";
-static AsgiVersion: &str = "2.0";
+static SpecVersion: &str = "2.3";
+static AsgiVersion: &str = "2.3";
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct ASGIVersions {

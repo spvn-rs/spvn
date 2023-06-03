@@ -4,7 +4,7 @@ use hyper::server::conn::Http;
 use log::info;
 
 use crate::startup::startup_message;
-use spvn_caller::{PyManager, PySpawn};
+use spvn_caller::PySpawn;
 
 use futures::executor;
 use pyo3::Python;
@@ -12,7 +12,6 @@ use tokio_rustls::rustls::ServerConfig;
 
 use crate::handlers::http::Bridge;
 
-use core::panic;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
@@ -99,7 +98,7 @@ async fn loop_passthru(
     scheduler: Arc<Scheduler>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
-        let (stream, addr) = listener.accept().await?;
+        let (stream, _addr) = listener.accept().await?;
         let bi = bi.clone();
         let scheduler = scheduler.clone();
         let fut = async move {

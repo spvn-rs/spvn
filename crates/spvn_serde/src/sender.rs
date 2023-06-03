@@ -1,18 +1,19 @@
-use crate::{ASGIResponse, ASGIResponsePyDict, InvalidationRationale};
+use crate::{ASGIResponse, AsgiDict, InvalidationRationale};
 use crossbeam::channel;
 use log::info;
-use pyo3::{exceptions::PyRuntimeError, prelude::*, pyclass::IterNextOutput, Python};
-use std::sync::Arc;
+use pyo3::{
+    exceptions::PyRuntimeError, prelude::*, pyclass::IterNextOutput, types::PyDict, Python,
+};
 
 #[pyclass]
 pub struct Sender {
-    chan: channel::Sender<Arc<ASGIResponse>>,
+    chan: channel::Sender<ASGIResponse>,
     sending: bool,
-    received: Option<Arc<ASGIResponse>>,
+    received: Option<ASGIResponse>,
 }
 
 impl Sender {
-    pub fn new(chan: channel::Sender<Arc<ASGIResponse>>) -> Self {
+    pub fn new(chan: channel::Sender<ASGIResponse>) -> Self {
         Self {
             chan,
             sending: false,
@@ -28,15 +29,15 @@ impl Sender {
     fn __call__<'a>(
         mut slf: PyRefMut<'a, Self>,
         _py: Python<'a>,
-        dict: ASGIResponsePyDict,
+        dict: &'a PyDict,
     ) -> Result<PyRefMut<'a, Self>, InvalidationRationale> {
         if slf.sending {
             return Err(InvalidationRationale {
                 message: String::from("did not call await on last send"),
             });
         }
-
-        let res: Result<ASGIResponse, InvalidationRationale> = dict.try_into();
+        let ad = AsgiDict(dict);
+        let res: Result<ASGIResponse, InvalidationRationale> = ad.try_into();
         let received = match res {
             Ok(res) => res,
             Err(e) => {
@@ -52,20 +53,25 @@ impl Sender {
         {
             info!("python sent {:#?}", received)
         };
-        slf.received = Some(Arc::new(received));
+        slf.received = Some(received);
         slf.sending = true;
         // Ok((slf.mtd)().into_py(py))
         Ok(slf)
     }
 
     fn __await__(slf: PyRefMut<'_, Self>) -> Result<PyRefMut<'_, Self>, PyErr> {
-        let res = slf.chan.send(slf.received.as_ref().unwrap().clone());
-        match res {
-            Ok(_) => Ok(slf),
-            Err(e) => {
-                info!("{:#?}", e);
-                Err(PyRuntimeError::new_err("an error occured sending the data"))
+        let r = slf.received.as_ref();
+        if r.is_some() {
+            let res = slf.chan.send(r.unwrap().to_owned());
+            match res {
+                Ok(_) => Ok(slf),
+                Err(e) => {
+                    info!("{:#?}", e);
+                    Err(PyRuntimeError::new_err("an error occured sending the data"))
+                }
             }
+        } else {
+            Err(PyRuntimeError::new_err("await before sending data"))
         }
     }
 

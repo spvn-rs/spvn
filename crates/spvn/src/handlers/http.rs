@@ -1,41 +1,37 @@
 use std::{
     pin::Pin,
     task::{Context, Poll},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use bytes::Bytes;
 
 use colored::Colorize;
+use http::response::Builder;
 // use crossbeam::channel;
 use log::info;
 use pyo3::prelude::*;
-use spvn_serde::{
-    receiver::{PyAsyncBodyReceiver, PySyncBodyReceiver},
-    state::StateKeys,
-    ASGIResponse,
-};
-use tokio::sync::mpsc::channel;
+use spvn_serde::{coalesced, receiver::PyAsyncBodyReceiver, state::StateMap, ASGIResponse};
+
 // use cpython::{py_class, PyBytes, PyDict, PyNone, PyResult, Python};
 use crate::handlers::tasks::Scheduler;
+
 use futures::lock::Mutex;
 use futures::Future;
 use http_body::Full;
 use hyper::body;
 use hyper::{body::Body as IncomingBody, Request, Response};
-
 use spvn_caller::service::caller::Call;
-use spvn_caller::{service::caller::SyncSafeCaller, PyPool};
+use spvn_caller::service::caller::SyncSafeCaller;
+use spvn_serde::asgi_scope::asgi_from_request;
 use spvn_serde::call_async::IntoPyFuture;
 use spvn_serde::sender::Sender;
-use spvn_serde::state::{Sending, State};
-use spvn_serde::{asgi_scope::asgi_from_request, state::Polling};
-use std::collections::HashMap;
+use spvn_serde::state::State;
+
 use std::marker::Send;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use tower_service::Service;
-
 type Caller = Arc<Mutex<SyncSafeCaller>>;
 type Ra = Result<http::Response<http_body::Full<bytes::Bytes>>, hyper::Error>;
 
@@ -100,17 +96,28 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             caller: Arc<SyncSafeCaller>,
             state: State,
         ) -> Ra {
-            let (tx_bdy, rx_bdy) = crossbeam::channel::bounded::<Arc<ASGIResponse>>(4);
+            // let final =
+            let (tx_bdy, rx_bdy) = crossbeam::channel::bounded::<ASGIResponse>(4);
+            let (tx_builder, rx_builder) = crossbeam::channel::bounded::<(Builder, Bytes)>(1);
+            let _captured: Mutex<Option<String>> = Mutex::new(None);
             tokio::spawn(async move {
                 while let Ok(resp) = rx_bdy.recv() {
                     let mut state = state.lock().await;
-                    state.insert(Instant::now(), resp.to_owned());
+                    state.0.insert(resp);
+                }
+                let state = state.lock().await;
+                let response = coalesced::coslesce_from_state(&state, Response::builder(), true);
+                // captured = Some("".to_string());
+                let res = tx_builder.send(response);
+
+                match res {
+                    Ok(_r) => (),
+                    Err(_e) => panic!("couldnt send response to channel"),
                 }
             });
 
             let sender = Sender::new(tx_bdy);
 
-            let (tx_bdy, rx_bdy) = crossbeam::channel::bounded::<Bytes>(1);
             let _bail_super = || return bail();
 
             // todo: handle
@@ -120,9 +127,10 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             let body = body::to_bytes(req.into_body()).await;
             let _b = match body {
                 Ok(bts) => bts,
-                Err(err) => return Err(err),
+                Err(err) => return bail_err(err),
             };
             let receiver = PyAsyncBodyReceiver { val: _b };
+
             let join_caller: Result<Result<(), ()>, tokio::task::JoinError> =
                 tokio::task::spawn(async move {
                     let res = Python::with_gil(|py| {
@@ -134,14 +142,41 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
                 })
                 .await;
 
-            // let _caller_rr = tokio::join!(join_caller,);
-            // let b = Full::new(Bytes::from(captured));
-            Ok(Response::builder()
-                .body(Full::new(Bytes::from("captured")))
-                .unwrap())
+            match join_caller {
+                Ok(call) => match call {
+                    Ok(_) => (),
+                    Err(pye) => {
+                        // eprintln!("{:#?}", pye);
+                        return bail();
+                    }
+                },
+                Err(pye) => {
+                    eprintln!("{}", pye)
+                }
+            }
+
+            match rx_builder.recv_timeout(Duration::from_millis(100)) {
+                Ok((builder, body)) => {
+                    let resp = builder.body(Full::new(body)).unwrap();
+
+                    // #[cfg(debug_assertions)]
+                    // {
+                    //     println!("{:#?}", resp)
+                    // }
+                    return Ok(resp);
+                }
+                Err(e) => {
+                    #[cfg(debug_assertions)]
+                    {
+                        eprintln!("the receiver timed out {:#?}", e)
+                    }
+                    return bail();
+                }
+            }
         }
 
-        let state = Arc::new(Mutex::new(HashMap::new()));
+        let hm: StateMap = StateMap::default();
+        let state: State = Arc::new(Mutex::new(hm));
         Box::pin(mk_response(req, self.caller.clone(), state))
     }
 }

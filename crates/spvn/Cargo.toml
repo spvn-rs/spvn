@@ -23,6 +23,8 @@ spvn_caller = {path = "../spvn_caller"}
 spvn_serde = {path = "../spvn_serde"}
 spvn_cfg = {path = "../spvn_cfg"}
 
+
+ahash = { workspace = true, features = ["std"] }
 bytes = { workspace = true }
 deadpool = { workspace = true }
 bytes-expand = { workspace = true }

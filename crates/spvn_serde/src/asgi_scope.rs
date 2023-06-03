@@ -3,7 +3,7 @@ use crate::implementation::{ASGIVersions, ASGI_IMPLEMENTATION};
 use bytes::Bytes;
 use http::{uri::Scheme, Uri, Version};
 use hyper::{body::Body as IncomingBody, Request};
-use pyo3::prelude::*;
+
 use pyo3::types::PyDict;
 use pyo3::Python;
 use pyo3::ToPyObject;

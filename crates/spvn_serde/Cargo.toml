@@ -11,6 +11,7 @@ crate-type = ["rlib"]
 
 [dependencies]
 http = { workspace = true }
+ahash = { workspace = true }
 hyper = { workspace = true, features = ["full"] }
 
 log = { workspace = true, features = ["max_level_error"]  }
