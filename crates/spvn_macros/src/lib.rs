@@ -1,21 +1,39 @@
+use crossbeam::channel;
+
+
 use pyo3::prelude::*;
 
-trait Call {
-    fn call() {}
+
+
+use std::time::Duration;
+
+
+
+
+
+
+
+
+use tokio::task::JoinHandle;
+
+trait IntoPyFuture<T, O, E> {
+    fn new(
+        poll: JoinHandle<Result<(), E>>,
+        val: Box<channel::Receiver<O>>,
+        deadline_task: Option<Duration>,
+    ) -> T;
 }
 
-macro_rules! new_ytz {
-    ($name:ident, $T: ty, $V: ty) => {{
+macro_rules! pyfuture_impl {
+    ($name:ident, $Typ: ty,  $Err: ty, $Val: ty) => {{
         use std::time::Duration;
         use std::time::Instant;
-
         use crossbeam::channel;
-
-        use log::info;
-
         use pyo3::exceptions::*;
         use pyo3::prelude::*;
         use pyo3::pyclass::IterNextOutput;
+        use tokio::task::JoinHandle;
+        use crate::IntoPyFuture;
 
         /// Implementation of python.futures.Future in rust.
         ///
@@ -38,24 +56,22 @@ macro_rules! new_ytz {
         ///     b. Yield[`PyFuture`] <br/>
         ///         * *  \_\___next__\_\_()
         #[pyclass]
-        pub struct PyFuture {
+        pub struct PyFuture   {
             started: Instant,
-            poller_deadline: Duration,
             deadline_task: Duration,
-            poll: fn() -> std::task::Poll<$T>,
-            val: channel::Receiver<$T>,
+            poll: JoinHandle<Result<(), $Err>>,
+            val: channel::Receiver<$Val>,
         }
 
         #[pymethods]
         impl PyFuture {
             /// Start the polling loop, ref back to self
-            fn __await__(slf: PyRef<'_, Self>) -> Result<PyRef<'_, Self>, PyErr> {
-                info!("await");
+            pub fn __await__(slf: PyRef<'_, Self>) -> Result<PyRef<'_, Self>, PyErr> {
                 Ok(slf)
             }
 
             /// Ref back to self as an iterator
-            fn __call__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+            pub fn __call__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
                 slf
             }
 
@@ -64,37 +80,43 @@ macro_rules! new_ytz {
             ///    * a: yield the output <br/>
             ///    * b: raise timeout error <br/>
             ///    * c: poll again (\_\_next\_\_(self))
-            fn __next__(slf: PyRef<'_, Self>) -> IterNextOutput<PyRef<'_, Self>, PyObject> {
+            pub fn __next__(slf: PyRef<'_, Self>) -> IterNextOutput<PyRef<'_, Self>, PyObject> {
                 if slf.started.elapsed().as_nanos() > slf.deadline_task.as_nanos() {
-                    panic!("deadline exceeded",)
+                    unsafe {
+                        return pyo3::pyclass::IterNextOutput::Return(
+                            PyRuntimeError::new_err("Context deadline exceeded")
+                                .to_object(Python::assume_gil_acquired()),
+                        );
+                    }
                 }
-                if (slf.poll)().is_pending() {
-                    info!("pending");
+                if !slf.poll.is_finished() {
                     return pyo3::pyclass::IterNextOutput::Yield(slf);
                 }
-                let v = match slf.val.recv_timeout(slf.poller_deadline) {
+                let v = match slf.val.recv() {
                     Ok(val) => val,
                     Err(_e) => unsafe {
+                        // TODO: see err https://github.com/PyO3/pyo3/pull/3202 and https://github.com/PyO3/pyo3/issues/3190 for when this will be fixed that we return an ACUTAL VALUE of the error instead of raising an err
                         return pyo3::pyclass::IterNextOutput::Return(
-                            PyRuntimeError::new_err("Receive failed")
+                            PyRuntimeError::new_err("receive failed")
                                 .to_object(Python::assume_gil_acquired()),
                         );
                     },
                 };
-                unsafe {
-                    pyo3::pyclass::IterNextOutput::Return(v.into_py(Python::assume_gil_acquired()))
-                }
+                unsafe { pyo3::pyclass::IterNextOutput::Return(v.into_py(Python::assume_gil_acquired())) }
             }
         }
 
-        impl PyFuture {
-            pub fn new(poll: fn() -> std::task::Poll<$T>, val: Box<channel::Receiver<$T>>) -> Self {
+        impl IntoPyFuture<PyFuture, $Val, $Err> for $Typ {
+            fn new(
+                poll: JoinHandle<Result<(), $Err>>,
+                val: Box<channel::Receiver<$Val>>,
+                deadline_task: Option<Duration>
+            ) -> PyFuture {
                 let fut = PyFuture {
                     poll: poll,
                     val: *val,
                     started: Instant::now(),
-                    deadline_task: Duration::from_secs(15),
-                    poller_deadline: Duration::from_nanos(15),
+                    deadline_task: deadline_task.unwrap_or(Duration::from_millis(500)),
                 };
                 fut
             }
@@ -102,27 +124,35 @@ macro_rules! new_ytz {
     }};
 }
 
+#[allow(private_in_public)]
 #[pyclass]
 struct BasicT {}
-
-impl Call for BasicT {
-    fn call() {}
-}
 
 #[cfg(test)]
 mod test {
     use crate::BasicT;
+    use crate::IntoPyFuture;
     use pyo3::prelude::*;
+    use pyo3::types::PyDict;
 
-    #[test]
-    fn test_basic() {
-        new_ytz!(BasicT, BasicT, i64);
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn test_basic() {
+        pyfuture_impl!(BasicT, BasicT, Result<BasicT,()>, i64);
 
-        let b = BasicT {};
+        let (tx_bdy, rx_bdy) = crossbeam::channel::bounded::<i64>(1);
 
-        let p = Python::with_gil(|py| b.into_py(py));
-        let a = Python::with_gil(|py| p.getattr(py, "__await__"));
+        let fut = tokio::task::spawn(async move {
+            let re = tx_bdy.send(1);
+            re.expect("panic in join handle due to send");
+            Ok(())
+        });
 
-        a.expect("oh no did not work");
+        Python::with_gil(|p| {
+            let _bt = BasicT::new(fut, Box::new(rx_bdy), None);
+            let _locals = PyDict::new(p);
+            // locals.set_item("b", bt)
+        });
+
+        ()
     }
 }

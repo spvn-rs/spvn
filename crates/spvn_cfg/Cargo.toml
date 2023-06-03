@@ -11,7 +11,7 @@ crate-type = ["rlib"]
 [dependencies]
 bytes = {workspace = true}
 spvn_serde = { path =  "../spvn_serde" }
-log = { workspace = true, features = ["max_level_error"] }
+log = { workspace = true, features = ["max_level_error"]  }
 toml = { workspace = true }
 serde = { workspace = true }
 pyo3 = {workspace = true, features = []}

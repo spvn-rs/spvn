@@ -1,58 +1,84 @@
 
-use crate::state::Polling;
 
-use futures::executor;
+use bytes::Bytes;
 
+
+use crate::call_async::IntoPyFuture;
+use crossbeam::channel;
 use log::info;
 use pyo3::prelude::{pyclass, pymethods};
 use pyo3::{exceptions::*, prelude::*};
-use pyo3::{types::PyBytes, Python};
+use pyo3::{Python};
+use std::time::Duration;
+use std::time::Instant;
 
+use pyo3::pyclass::IterNextOutput;
+use tokio::task::JoinHandle;
 
 #[pyclass]
-/// This class receives the raw bts from the request and feeds into python's interpreter
-///
-/// Receiver is a PYTHON receiver
-/// This differs from RUST receiver, where the relative position is swapped
-pub struct Receive {
-    pub shot: Polling,
+pub struct PyAsyncBodyReceiver {
+    started: Instant,
+    deadline_task: Duration,
+    poll: JoinHandle<Result<(), hyper::Error>>,
+    val: channel::Receiver<Bytes>,
 }
 
 #[pymethods]
-impl Receive {
-    /// Serializes [`Bytes`] from [`Polling`] into [`PyBytes`]
-    fn __call__<'a>(&mut self, py: Python<'a>) -> PyResult<&'a PyBytes> {
-        let b = &mut futures::executor::block_on(self.shot.lock());
-        #[cfg(debug_assertions)]
-        {
-            info!("python made call to receive bytes")
+impl PyAsyncBodyReceiver {
+    /// Start the polling loop, ref back to self
+    fn __await__(slf: PyRef<'_, Self>) -> Result<PyRef<'_, Self>, PyErr> {
+        info!("await");
+        Ok(slf)
+    }
+
+    /// Ref back to self as an iterator
+    fn __call__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    /// Serialize the poller into a callable iterator for python
+    /// Each iteration polls the poller to determine whether to: <br/>
+    ///    * a: yield the output <br/>
+    ///    * b: raise timeout error <br/>
+    ///    * c: poll again (\_\_next\_\_(self))
+    fn __next__(slf: PyRef<'_, Self>) -> IterNextOutput<PyRef<'_, Self>, PyObject> {
+        if slf.started.elapsed().as_nanos() > slf.deadline_task.as_nanos() {
+            unsafe {
+                return pyo3::pyclass::IterNextOutput::Return(
+                    PyRuntimeError::new_err("Context deadline exceeded")
+                        .to_object(Python::assume_gil_acquired()),
+                );
+            }
         }
-
-        // ** dont call receive_blocking here, it will panic **
-        let rcv = executor::block_on(b.recv());
-        let bts = match rcv {
-            Some(bts) => bts,
-            None => return Err(PyIOError::new_err("error receiving caller channel")),
+        if !slf.poll.is_finished() {
+            return pyo3::pyclass::IterNextOutput::Yield(slf);
+        }
+        let v = match slf.val.recv() {
+            Ok(val) => val,
+            Err(_e) => unsafe {
+                // TODO: see err https://github.com/PyO3/pyo3/pull/3202 and https://github.com/PyO3/pyo3/issues/3190 for when this will be fixed that we return an ACUTAL VALUE of the error instead of raising an err
+                return pyo3::pyclass::IterNextOutput::Return(
+                    PyRuntimeError::new_err("receive failed")
+                        .to_object(Python::assume_gil_acquired()),
+                );
+            },
         };
-
-        Ok(PyBytes::new(py, bts.as_ref()))
+        unsafe { pyo3::pyclass::IterNextOutput::Return(v.into_py(Python::assume_gil_acquired())) }
     }
 }
 
-// impl From<Arc<Mutex<Bytes>>> for Receive {
-//     fn from(bytes: Arc<Mutex<Bytes>>) -> Self {
-//         Self { bytes }
-//     }
-// }
-
-// #[pymethods]
-// impl Receive {
-//     fn __call__<'a>(&mut self, py: Python<'a>) -> PyResult<&'a PyBytes> {
-//         let b = futures::executor::block_on(self.bytes.lock());
-//         #[cfg(debug_assertions)]
-//         {
-//             info!("python made call to receive bytes")
-//         }
-//         unsafe { Ok(PyBytes::new(py, b.as_ref())) }
-//     }
-// }
+impl IntoPyFuture<PyAsyncBodyReceiver, Bytes, hyper::Error> for PyAsyncBodyReceiver {
+    fn new(
+        poll: JoinHandle<Result<(), hyper::Error>>,
+        val: Box<channel::Receiver<Bytes>>,
+        deadline_task: Option<Duration>,
+    ) -> Self {
+        let fut = PyAsyncBodyReceiver {
+            poll: poll,
+            val: *val,
+            started: Instant::now(),
+            deadline_task: deadline_task.unwrap_or(Duration::from_millis(1)),
+        };
+        fut
+    }
+}

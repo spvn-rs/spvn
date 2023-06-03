@@ -1,30 +1,22 @@
-
-
-use crate::{
-    state::{Sending, State},
-    ASGIResponse, ASGIResponsePyDict, InvalidationRationale,
-};
-
-
-
+use crate::{ASGIResponse, ASGIResponsePyDict, InvalidationRationale};
+use crossbeam::channel;
 use log::info;
-use pyo3::{prelude::*, Python};
+use pyo3::{exceptions::PyRuntimeError, prelude::*, pyclass::IterNextOutput, Python};
 use std::sync::Arc;
-
-use tokio::sync::oneshot::Receiver;
 
 #[pyclass]
 pub struct Sender {
-    pub state: State,
-    pub bytes: Sending,
-    // pub mtd: fn() -> IterAwait,
+    chan: channel::Sender<Arc<ASGIResponse>>,
+    sending: bool,
+    received: Option<Arc<ASGIResponse>>,
 }
 
 impl Sender {
-    pub fn new(bytes: Sending, state: State, _rx: Arc<Receiver<bool>>) -> Self {
+    pub fn new(chan: channel::Sender<Arc<ASGIResponse>>) -> Self {
         Self {
-            state,
-            bytes,
+            chan,
+            sending: false,
+            received: None,
             // mtd: || IterAwait::new(Poll::Ready(true), rx),
         }
     }
@@ -34,10 +26,18 @@ impl Sender {
 impl Sender {
     // TODO: turn async
     fn __call__<'a>(
-        _slf: PyRef<'_, Self>,
+        mut slf: PyRefMut<'a, Self>,
         _py: Python<'a>,
         dict: ASGIResponsePyDict,
-    ) -> Result<(), InvalidationRationale> {
+    ) -> Result<PyRefMut<'a, Self>, InvalidationRationale> {
+        info!("call");
+
+        if slf.sending {
+            return Err(InvalidationRationale {
+                message: String::from("did not call await on last send"),
+            });
+        }
+
         let res: Result<ASGIResponse, InvalidationRationale> = dict.try_into();
         let received = match res {
             Ok(res) => res,
@@ -49,11 +49,36 @@ impl Sender {
                 return Err(e);
             }
         };
+
         #[cfg(debug_assertions)]
         {
             info!("python sent {:#?}", received)
         };
+        slf.received = Some(Arc::new(received));
+        slf.sending = true;
         // Ok((slf.mtd)().into_py(py))
-        Ok(())
+        Ok(slf)
+    }
+
+    fn __await__(slf: PyRefMut<'_, Self>) -> Result<PyRefMut<'_, Self>, PyErr> {
+        info!("await");
+        let res = slf.chan.send(slf.received.as_ref().unwrap().clone());
+        match res {
+            Ok(_) => Ok(slf),
+            Err(e) => {
+                info!("{:#?}", e);
+                Err(PyRuntimeError::new_err("an error occured sending the data"))
+            }
+        }
+    }
+
+    fn __next__<'a>(
+        mut slf: PyRefMut<'a, Self>,
+        py: Python,
+    ) -> IterNextOutput<PyRefMut<'a, Self>, PyObject> {
+        info!("next");
+        slf.sending = false;
+        slf.received = None;
+        pyo3::pyclass::IterNextOutput::Return(py.None())
     }
 }

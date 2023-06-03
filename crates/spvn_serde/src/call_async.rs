@@ -3,11 +3,22 @@ use std::time::Instant;
 
 use crossbeam::channel;
 
+use futures::Future;
 use log::info;
 
 use pyo3::exceptions::*;
 use pyo3::prelude::*;
 use pyo3::pyclass::IterNextOutput;
+
+use tokio::task::JoinHandle;
+
+pub trait IntoPyFuture<T, O, E> {
+    fn new(
+        poll: JoinHandle<Result<(), E>>,
+        val: Box<channel::Receiver<O>>,
+        deadline_task: Option<Duration>,
+    ) -> T;
+}
 
 /// Implementation of python.futures.Future in rust.
 ///
@@ -32,9 +43,8 @@ use pyo3::pyclass::IterNextOutput;
 #[pyclass]
 pub struct PyFuture {
     started: Instant,
-    poller_deadline: Duration,
     deadline_task: Duration,
-    poll: fn() -> std::task::Poll<bool>,
+    poll: JoinHandle<Result<(), hyper::Error>>,
     val: channel::Receiver<bool>,
 }
 
@@ -58,17 +68,22 @@ impl PyFuture {
     ///    * c: poll again (\_\_next\_\_(self))
     fn __next__(slf: PyRef<'_, Self>) -> IterNextOutput<PyRef<'_, Self>, PyObject> {
         if slf.started.elapsed().as_nanos() > slf.deadline_task.as_nanos() {
-            panic!("deadline exceeded",)
+            unsafe {
+                return pyo3::pyclass::IterNextOutput::Return(
+                    PyRuntimeError::new_err("Context deadline exceeded")
+                        .to_object(Python::assume_gil_acquired()),
+                );
+            }
         }
-        if (slf.poll)().is_pending() {
-            info!("pending");
+        if !slf.poll.is_finished() {
             return pyo3::pyclass::IterNextOutput::Yield(slf);
         }
-        let v = match slf.val.recv_timeout(slf.poller_deadline) {
+        let v = match slf.val.recv() {
             Ok(val) => val,
             Err(_e) => unsafe {
+                // TODO: see err https://github.com/PyO3/pyo3/pull/3202 and https://github.com/PyO3/pyo3/issues/3190 for when this will be fixed that we return an ACUTAL VALUE of the error instead of raising an err
                 return pyo3::pyclass::IterNextOutput::Return(
-                    PyRuntimeError::new_err("Receive failed")
+                    PyRuntimeError::new_err("receive failed")
                         .to_object(Python::assume_gil_acquired()),
                 );
             },
@@ -77,14 +92,17 @@ impl PyFuture {
     }
 }
 
-impl PyFuture {
-    pub fn new(poll: fn() -> std::task::Poll<bool>, val: Box<channel::Receiver<bool>>) -> Self {
+impl IntoPyFuture<PyFuture, bool, hyper::Error> for PyFuture {
+    fn new(
+        poll: JoinHandle<Result<(), hyper::Error>>,
+        val: Box<channel::Receiver<bool>>,
+        deadline_task: Option<Duration>,
+    ) -> Self {
         let fut = PyFuture {
             poll: poll,
             val: *val,
             started: Instant::now(),
-            deadline_task: Duration::from_secs(15),
-            poller_deadline: Duration::from_nanos(15),
+            deadline_task: deadline_task.unwrap_or(Duration::from_millis(1)),
         };
         fut
     }

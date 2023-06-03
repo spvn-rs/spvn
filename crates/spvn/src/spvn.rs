@@ -3,7 +3,7 @@ use crate::handlers::tasks::{Schedule, Scheduler};
 use hyper::server::conn::Http;
 use log::info;
 
-use spvn_caller::{PyManager};
+use spvn_caller::PyManager;
 
 use crate::startup::startup_message;
 
@@ -12,8 +12,6 @@ use pyo3::Python;
 use tokio_rustls::rustls::ServerConfig;
 
 use crate::handlers::http::Bridge;
-
-
 
 use std::net::SocketAddr;
 use std::sync::Arc;

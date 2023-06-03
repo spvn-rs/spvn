@@ -1295,11 +1295,14 @@ version = "0.1.0"
 dependencies = [
  "colored",
  "crossbeam",
+ "futures",
+ "hyper",
  "log",
  "pyo3",
  "quote",
  "simple_logger",
  "syn 1.0.109",
+ "tokio",
 ]
 
 [[package]]
