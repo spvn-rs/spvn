@@ -1,7 +1,7 @@
 use std::{
     pin::Pin,
     task::{Context, Poll},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use bytes::Bytes;
@@ -12,6 +12,7 @@ use log::info;
 use pyo3::prelude::*;
 use spvn_serde::{
     receiver::{PyAsyncBodyReceiver, PySyncBodyReceiver},
+    state::StateKeys,
     ASGIResponse,
 };
 use tokio::sync::mpsc::channel;
@@ -32,7 +33,6 @@ use spvn_serde::{asgi_scope::asgi_from_request, state::Polling};
 use std::collections::HashMap;
 use std::marker::Send;
 use std::sync::Arc;
-use tokio::sync::oneshot::channel as oneshot;
 use tokio_util::sync::CancellationToken;
 use tower_service::Service;
 
@@ -40,10 +40,8 @@ type Caller = Arc<Mutex<SyncSafeCaller>>;
 type Ra = Result<http::Response<http_body::Full<bytes::Bytes>>, hyper::Error>;
 
 pub struct Bridge {
-    state: State,
+    // state: State,
     caller: Arc<SyncSafeCaller>,
-    send: Sending,
-    watch: Polling,
     // ptr only
     scheduler: Arc<Scheduler>,
     cancel: Box<CancellationToken>,
@@ -51,13 +49,10 @@ pub struct Bridge {
 
 impl Bridge {
     pub fn new(caller: Arc<SyncSafeCaller>, scheduler: Arc<Scheduler>) -> Self {
-        let (tx, rx) = channel::<Bytes>(3);
         let token = CancellationToken::new();
         Self {
             caller: caller,
-            state: Arc::new(Mutex::new(HashMap::new())),
-            send: Arc::new(Mutex::new(tx)),
-            watch: Arc::new(Mutex::new(rx)),
+            // state: Arc::new(Mutex::new(HashMap::new())),
             scheduler: scheduler.clone(),
             cancel: Box::new(token),
         }
@@ -103,16 +98,16 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
         async fn mk_response(
             req: Request<IncomingBody>,
             caller: Arc<SyncSafeCaller>,
-            _state: State,
-            _send: Sending,
-            _watch: Polling,
+            state: State,
         ) -> Ra {
             let (tx_bdy, rx_bdy) = crossbeam::channel::bounded::<Arc<ASGIResponse>>(4);
             tokio::spawn(async move {
                 while let Ok(resp) = rx_bdy.recv() {
-                    info!("received at server {:#?}", resp)
+                    let mut state = state.lock().await;
+                    state.insert(Instant::now(), resp.to_owned());
                 }
             });
+            eprintln!("call ");
 
             let sender = Sender::new(tx_bdy);
 
@@ -122,54 +117,17 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             // todo: handle
             let _token = CancellationToken::new();
             let asgi = asgi_from_request(&req);
-            // let join_body: tokio::task::JoinHandle<_> = tokio::task::spawn(async move {
-            //     let body = body::to_bytes(req.into_body()).await;
-            //     let _b = match body {
-            //         Ok(bts) => bts,
-            //         Err(err) => return Err(err),
-            //     };
-            //     let re = tx_bdy.send(_b);
-            //     info!("sending data");
-            //     #[cfg(debug_assertions)]
-            //     {
-            //         info!("response from send {:#?}", re);
-            //     }
-            //     match re {
-            //         Ok(_) => (),
-            //         Err(e) => info!("error during call {:#?}", e),
-            //     };
-            //     Ok(())
-            // });
             let body = body::to_bytes(req.into_body()).await;
             let _b = match body {
                 Ok(bts) => bts,
                 Err(err) => return Err(err),
             };
-            // let receiver = PyAsyncBodyReceiver::new(
-            //     join_body,
-            //     Box::new(rx_bdy),
-            //     Some(Duration::from_millis(1500)),
-            // );
             let receiver = PyAsyncBodyReceiver { val: _b };
             let join_caller: Result<Result<(), ()>, tokio::task::JoinError> =
                 tokio::task::spawn(async move {
                     let res = Python::with_gil(|py| {
                         let obj = asgi.to_object(py);
-                        caller.call(
-                            py,
-                            (
-                                obj,
-                                // py.None(),
-                                // py.None(),
-                                receiver,
-                                sender,
-                                // PyFuture::new(
-                                //     join_body,
-                                //     Box::new(rx_bdy),
-                                //     Some(Duration::from_millis(500)),
-                                // ),
-                            ),
-                        )
+                        caller.call(py, (obj, receiver, sender))
                     });
                     info!("{:#?}", res);
                     Ok(())
@@ -182,12 +140,8 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
                 .body(Full::new(Bytes::from("captured")))
                 .unwrap())
         }
-        Box::pin(mk_response(
-            req,
-            self.caller.clone(),
-            self.state.clone(),
-            self.send.clone(),
-            self.watch.clone(),
-        ))
+
+        let state = Arc::new(Mutex::new(HashMap::new()));
+        Box::pin(mk_response(req, self.caller.clone(), state))
     }
 }

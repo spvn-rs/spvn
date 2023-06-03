@@ -1,5 +1,3 @@
-experimental = ["concat_idents"]
-
 [package]
 name = "spvn_macros"
 version = { workspace = true }

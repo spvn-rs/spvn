@@ -30,8 +30,6 @@ impl Sender {
         _py: Python<'a>,
         dict: ASGIResponsePyDict,
     ) -> Result<PyRefMut<'a, Self>, InvalidationRationale> {
-        info!("call");
-
         if slf.sending {
             return Err(InvalidationRationale {
                 message: String::from("did not call await on last send"),
@@ -61,7 +59,6 @@ impl Sender {
     }
 
     fn __await__(slf: PyRefMut<'_, Self>) -> Result<PyRefMut<'_, Self>, PyErr> {
-        info!("await");
         let res = slf.chan.send(slf.received.as_ref().unwrap().clone());
         match res {
             Ok(_) => Ok(slf),

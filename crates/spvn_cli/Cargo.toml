@@ -20,7 +20,7 @@ spvn_listen = { path = "../spvn_listen" }
 
 
 simple_logger = { workspace = true }
-log = { workspace = true, features = ["max_level_error"]  }
+log = { workspace = true  }
 clap = { workspace = true, features = ["derive", "env"] }
 anyhow = { workspace = true }
 tokio = { workspace = true, features = ["sync", "rt", "rt-multi-thread"]}
