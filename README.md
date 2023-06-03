@@ -53,10 +53,10 @@ Roughly in order of priority
 
 - [✅] Integrate standard import semantics
 
-- [🚧] PyCaller
+- [✅] PyCaller
   - [✅] (rust) Async safe integration
   - [✅] Abstract (py fn) async / sync handle
-  - [🚧] Caller pool
+  - [✅] Caller pool [this will be revised, its too slow]
 - [🚧] Standard asgi traits & structs
   - [🚧] ASGIScope
     - [✅] (rust) Async safe integration
@@ -105,9 +105,9 @@ Delegation of connection multiplex, stream, and IO processes into Rust, and auto
 
 - perf has test files containing basic benchmarks
   - hypercorn @ 1 worker = 683402-788307 ns
-  - spvn -> py @ 1 worker = 395430-727142 ns
+  - spvn -> py @ 1 worker = 159201-221808 ns
 
-This is still too slow, but is a <i>very</i> preliminary implementation of the caller protocol using sync processes. The intented scope is to bring methods into async runtimes, allowing for concurrent continuous calls without dropping connections or locks due to IO bound processes.
+This is a <i>very</i> preliminary implementation of the caller protocol using async processes.
 
 ## Developing
 

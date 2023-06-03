@@ -16,12 +16,15 @@ changelog:
 .PHONY: vars
 unexport CONDA_PREFIX
 vars:
-		export PYO3_PYTHON=/Users/joshuaauchincloss/Movies/spvn_pyo3/env/bin/python
+		export PYO3_PYTHON=./env/bin/python
 lint:
 		black ./**/**.py &&
 		ruff check . --fix &&
 		cargo fmt --fix
-
+prof-bin:
+		cargo instruments --bin spvn \
+			--template sys serve \
+			--target dotest.foo:app
 
 
 

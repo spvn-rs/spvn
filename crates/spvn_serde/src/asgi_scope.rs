@@ -3,12 +3,12 @@ use crate::implementation::{ASGIVersions, ASGI_IMPLEMENTATION};
 use bytes::Bytes;
 use http::{uri::Scheme, Uri, Version};
 use hyper::{body::Body as IncomingBody, Request};
+use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3::Python;
 use pyo3::ToPyObject;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+// #[pyclass]
 pub struct ASGIScope {
     _type: String,
     asgi: ASGIVersions,
@@ -26,6 +26,7 @@ pub struct ASGIScope {
     subprotocols: Option<Vec<String>>,
 }
 
+// as ugly as it is this is faster to serialize than a pyo3 custom class
 impl ASGIScope {
     pub fn to_object(self, py: Python<'_>) -> pyo3::PyObject {
         let dict = PyDict::new(py);

@@ -17,7 +17,7 @@ use std::{
     ops::{Deref, DerefMut},
     ptr,
     sync::{Arc, Mutex},
-    task::{Poll},
+    task::Poll,
 };
 
 use std::marker::PhantomData;

@@ -3,7 +3,7 @@ use crate::handlers::tasks::{Schedule, Scheduler};
 use hyper::server::conn::Http;
 use log::info;
 
-use spvn_caller::PyManager;
+use spvn_caller::{PyManager, PySpawn};
 
 use crate::startup::startup_message;
 
@@ -74,7 +74,7 @@ impl Spvn {
         // let mut caller = PySpawn::new();
         // caller.spawn(self.cfg.n_threads);
 
-        let bi: Arc<deadpool::managed::Pool<PyManager>> = Arc::new(PyManager::new(2));
+        let bi: Arc<spvn_caller::service::caller::SyncSafeCaller> = Arc::new(PySpawn::gen());
 
         if !self.cfg.tls.is_none() {
             startup_message(addr, true);
@@ -89,7 +89,7 @@ impl Spvn {
     async fn loop_tls(
         listener: TcpListener,
         acceptor: TlsAcceptor,
-        bi: Arc<deadpool::managed::Pool<PyManager>>,
+        bi: Arc<spvn_caller::service::caller::SyncSafeCaller>,
         scheduler: Arc<Scheduler>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         loop {
@@ -109,13 +109,13 @@ impl Spvn {
 
                 Ok(()) as std::io::Result<()>
             };
-            tokio::task::spawn(fut);
+            tokio::spawn(fut);
         }
     }
 
     async fn loop_passthru(
         listener: TcpListener,
-        bi: Arc<deadpool::managed::Pool<PyManager>>,
+        bi: Arc<spvn_caller::service::caller::SyncSafeCaller>,
         scheduler: Arc<Scheduler>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         loop {
@@ -132,7 +132,7 @@ impl Spvn {
 
                 Ok(()) as std::io::Result<()>
             };
-            tokio::task::spawn(fut);
+            tokio::spawn(fut);
         }
     }
 

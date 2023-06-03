@@ -10,7 +10,10 @@ use colored::Colorize;
 // use crossbeam::channel;
 use log::info;
 use pyo3::prelude::*;
-use spvn_serde::{receiver::PyAsyncBodyReceiver, ASGIResponse};
+use spvn_serde::{
+    receiver::{PyAsyncBodyReceiver, PySyncBodyReceiver},
+    ASGIResponse,
+};
 use tokio::sync::mpsc::channel;
 // use cpython::{py_class, PyBytes, PyDict, PyNone, PyResult, Python};
 use crate::handlers::tasks::Scheduler;
@@ -38,7 +41,7 @@ type Ra = Result<http::Response<http_body::Full<bytes::Bytes>>, hyper::Error>;
 
 pub struct Bridge {
     state: State,
-    caller: Arc<PyPool>,
+    caller: Arc<SyncSafeCaller>,
     send: Sending,
     watch: Polling,
     // ptr only
@@ -47,7 +50,7 @@ pub struct Bridge {
 }
 
 impl Bridge {
-    pub fn new(caller: Arc<PyPool>, scheduler: Arc<Scheduler>) -> Self {
+    pub fn new(caller: Arc<SyncSafeCaller>, scheduler: Arc<Scheduler>) -> Self {
         let (tx, rx) = channel::<Bytes>(3);
         let token = CancellationToken::new();
         Self {
@@ -99,26 +102,12 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
     fn call(&mut self, req: Request<IncomingBody>) -> Self::Future {
         async fn mk_response(
             req: Request<IncomingBody>,
-            caller: Arc<PyPool>,
+            caller: Arc<SyncSafeCaller>,
             _state: State,
             _send: Sending,
             _watch: Polling,
         ) -> Ra {
-            let scope = Python::with_gil(|py| asgi_from_request(&req).to_object(py));
-
-            let (_tx, _rx) = oneshot::<bool>();
-            // this will allow the python fn to send us messages
-
-            // must be called AFTER setting asgi params so we dont steal the ptr
-            // let body_p: Result<Bytes, hyper::Error> = body::to_bytes(req.into_body()).await;
-
-            // this will allow the python fn to receive the bytes in a lazy manner
-
-            // let receiver = Receive {
-            //     shot: watch.clone(),
-            // };
             let (tx_bdy, rx_bdy) = crossbeam::channel::bounded::<Arc<ASGIResponse>>(4);
-
             tokio::spawn(async move {
                 while let Ok(resp) = rx_bdy.recv() {
                     info!("received at server {:#?}", resp)
@@ -132,60 +121,62 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
 
             // todo: handle
             let _token = CancellationToken::new();
+            let asgi = asgi_from_request(&req);
+            // let join_body: tokio::task::JoinHandle<_> = tokio::task::spawn(async move {
+            //     let body = body::to_bytes(req.into_body()).await;
+            //     let _b = match body {
+            //         Ok(bts) => bts,
+            //         Err(err) => return Err(err),
+            //     };
+            //     let re = tx_bdy.send(_b);
+            //     info!("sending data");
+            //     #[cfg(debug_assertions)]
+            //     {
+            //         info!("response from send {:#?}", re);
+            //     }
+            //     match re {
+            //         Ok(_) => (),
+            //         Err(e) => info!("error during call {:#?}", e),
+            //     };
+            //     Ok(())
+            // });
+            let body = body::to_bytes(req.into_body()).await;
+            let _b = match body {
+                Ok(bts) => bts,
+                Err(err) => return Err(err),
+            };
+            // let receiver = PyAsyncBodyReceiver::new(
+            //     join_body,
+            //     Box::new(rx_bdy),
+            //     Some(Duration::from_millis(1500)),
+            // );
+            let receiver = PyAsyncBodyReceiver { val: _b };
+            let join_caller: Result<Result<(), ()>, tokio::task::JoinError> =
+                tokio::task::spawn(async move {
+                    let res = Python::with_gil(|py| {
+                        let obj = asgi.to_object(py);
+                        caller.call(
+                            py,
+                            (
+                                obj,
+                                // py.None(),
+                                // py.None(),
+                                receiver,
+                                sender,
+                                // PyFuture::new(
+                                //     join_body,
+                                //     Box::new(rx_bdy),
+                                //     Some(Duration::from_millis(500)),
+                                // ),
+                            ),
+                        )
+                    });
+                    info!("{:#?}", res);
+                    Ok(())
+                })
+                .await;
 
-            let join_body: tokio::task::JoinHandle<_> = tokio::task::spawn(async move {
-                let body = body::to_bytes(req.into_body()).await;
-                let _b = match body {
-                    Ok(bts) => bts,
-                    Err(err) => return Err(err),
-                };
-                let re = tx_bdy.send(_b);
-                info!("sending data");
-                #[cfg(debug_assertions)]
-                {
-                    info!("response from send {:#?}", re);
-                }
-                match re {
-                    Ok(_) => (),
-                    Err(e) => info!("error during call {:#?}", e),
-                };
-                Ok(())
-            });
-            let receiver = PyAsyncBodyReceiver::new(
-                join_body,
-                Box::new(rx_bdy),
-                Some(Duration::from_millis(500)),
-            );
-            let join_caller = tokio::task::spawn(async move {
-                let caller = caller.get().await;
-                match caller {
-                    Ok(call) => {
-                        let res = Python::with_gil(|py| {
-                            call.call(
-                                py,
-                                (
-                                    scope, receiver,
-                                    sender,
-                                    // PyFuture::new(
-                                    //     join_body,
-                                    //     Box::new(rx_bdy),
-                                    //     Some(Duration::from_millis(500)),
-                                    // ),
-                                ),
-                            )
-                        });
-                        info!("{:#?}", res);
-                        ()
-                    }
-                    Err(e) => {
-                        eprintln!("an error occured setting calling the handler - {:#?}", e);
-                        return Err(e);
-                    }
-                };
-                Ok(())
-            });
-
-            let _caller_rr = tokio::join!(join_caller,);
+            // let _caller_rr = tokio::join!(join_caller,);
             // let b = Full::new(Bytes::from(captured));
             Ok(Response::builder()
                 .body(Full::new(Bytes::from("captured")))
