@@ -1,105 +1,17 @@
 pub mod service;
-use std::{env, ops::DerefMut};
+use std::env;
 
 use crate::service::{imports::resolve_import, lifespan::LifeSpan};
-
-// use cpython::{
-//     ObjectProtocol, PyDict, Python,
-// };
-
 use async_trait::async_trait;
-use pyo3::prelude::*;
-use std::{
-    cmp::max,
-    mem::{align_of, size_of},
-    ops::Deref,
-    ptr,
-};
-
 use deadpool::managed;
 use log::info;
+use pyo3::prelude::*;
 
 use service::caller::SyncSafeCaller;
-use std::marker::PhantomData;
 
 pub struct PySpawn {
-    pool: Option<SyncSafeCaller>,
+    // pool: Option<SyncSafeCaller>,
 }
-
-// fn make_sync<'life0, 'async_trait, T>(
-//     &'life0 self,
-//     fu: fn(Python),
-// ) -> ::core::pin::Pin<
-//     Box<dyn ::core::future::Future<Output = ()> + ::core::marker::Send + 'async_trait>,
-// >
-// where
-//     'life0: 'async_trait,
-//     T: 'async_trait,
-// {
-//     let call = async {};
-//     // call
-// }
-
-// #[async_trait]
-// trait CallAsyncRCSafe {
-//     async fn async_call(
-//         &self,
-//         serialize: SerialToPyKwargs,
-//         schedule: fn(
-//             fn(Python),
-//         )
-//             -> Pin<Box<dyn ::core::future::Future<Output = ()> + ::core::marker::Send>>,
-//     ) {
-//     }
-// }
-// py_class!(class AsyncCallKwargs |py| {
-
-//     data schedule: fn(
-//         fn(Python),
-//     ) -> Pin<
-//         Box<dyn ::core::future::Future<Output = ()> + ::core::marker::Send>,
-//     > ;
-
-//     // def __new__(_cls) -> PyResult<AsyncCallKwargs> {
-//     //     AsyncCallKwargs::create_instance(py,
-
-//     //         )
-//     // }
-
-//     def call_soon(&self, fu) -> PyResult<PyNone> {
-//         let schedule = |req| Box::pin(self.schedule(req));
-//         let vc = fu.to_py_object(py);
-//         let fut = |py| {
-//             vc.call(py, NoArgs, None);
-//         };
-//         tokio::spawn(schedule(py));
-
-//         Ok(PyNone)
-//     }
-// });
-
-// #[async_trait]
-// impl CallAsyncRCSafe for PySpawn {
-//     async fn async_call(
-//         &self,
-//         serialize: SerialToPyKwargs,
-//         schedule: fn(
-//             fn(Python),
-//         )
-//             -> Pin<Box<dyn ::core::future::Future<Output = ()> + ::core::marker::Send>>,
-//     ) {
-//         let schedule = |req| Box::pin(schedule(req));
-
-//         tokio::spawn(schedule(None));
-
-//         self.call(|py| -> PyDict {
-//             let r = PyDict::new(py);
-
-//             r
-//         });
-//     }
-// }
-
 pub struct PyManager {}
 
 #[async_trait]
@@ -128,16 +40,8 @@ impl PyManager {
 
 impl PySpawn {
     pub fn new() -> Self {
-        PySpawn { pool: None }
+        PySpawn {}
     }
-    // pub async fn call(self, base: impl IntoPy<Py<PyTuple>>) -> anyhow::Result<()> {
-    //     self
-    //         .pool
-    //         .expect("call before caller acquired")
-    //         .get()
-    //         .deref_mut()
-    //         .call(Python::acquire_gil().python(), base)
-    // }
     pub fn gen() -> SyncSafeCaller {
         let target = env::var("SPVN_SRV_TARGET");
         #[cfg(debug_assertions)]
@@ -167,56 +71,6 @@ impl PySpawn {
 pub trait Spawn {
     fn spawn(&mut self, size: usize);
 }
-
-// impl Spawn for PySpawn {
-// fn spawn(&mut self, size: usize) {
-//     self.pool
-//         .replace(SyncPool::with_builder_and_size(size, PySpawn::gen));
-// }
-// }
-
-#[derive(Clone, Copy)]
-pub struct PySpawnRef {
-    ptr: std::ptr::NonNull<PySpawn>,
-    _data: PhantomData<PySpawn>,
-}
-
-impl PySpawnRef {
-    pub fn new(spawn: PySpawn) -> Self {
-        let mut memptr: *mut PySpawn = ptr::null_mut();
-        unsafe {
-            let ret = libc::posix_memalign(
-                (&mut memptr as *mut *mut PySpawn).cast(),
-                max(align_of::<PySpawn>(), size_of::<usize>()),
-                size_of::<PySpawn>(),
-            );
-            assert_eq!(ret, 0, "Failed to allocate or invalid alignment");
-        };
-        let ptr = { ptr::NonNull::new(memptr).expect("posix_memalign should have returned 0") };
-        unsafe {
-            ptr.as_ptr().write(spawn);
-        }
-        Self {
-            ptr,
-            _data: PhantomData::default(),
-        }
-    }
-}
-
-impl Deref for PySpawnRef {
-    type Target = PySpawn;
-    fn deref(&self) -> &Self::Target {
-        unsafe { self.ptr.as_ref() }
-    }
-}
-
-impl DerefMut for PySpawnRef {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { self.ptr.as_mut() }
-    }
-}
-
-unsafe impl Send for PySpawnRef {}
 
 #[cfg(test)]
 #[allow(unused_must_use, unused_imports)]

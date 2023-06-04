@@ -1,6 +1,20 @@
-async def app(scope, receive, send):
-    assert scope['type'] == 'http'
+import asyncio
+from dataclasses import dataclass
 
+@dataclass
+class DB:
+    cx_id: str
+
+async def dependent_start_task() -> DB:
+    return DB(cx_id='123')
+
+async def app(scope=None, receive=None, send=None):
+    if scope['type'] == 'lifecycle.startup':
+        asyncio.run(dependent_start_task())
+        return await send({
+            'type': 'lifecycle.startup.success',
+        })
+    await receive()
     await send({
         'type': 'http.response.start',
         'status': 200,

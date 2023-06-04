@@ -77,22 +77,19 @@ impl LifeSpan for Caller {
         let (tx_cb, rx_cb) = crossbeam::channel::bounded::<Option<ASGIResponse>>(1);
         let recv = Sender::new(tx);
         let msg = ASGIEvent::from(ASGIType::LifecycleStartup);
-        
-        thread::scope(|s| {
-            s.spawn(|_| {
-                let rec = rx.recv_timeout(Duration::from_secs(15));
-                let r = match rec {
-                    Ok(resp) => Some(resp),
-                    Err(e) => {
-                        eprintln!("{:#?}", e);
-                        None
-                    }
-                };
-                tx_cb.send(r);
-            });
-        })
-        .unwrap();
-        let res = Python::with_gil(|py| self.call(py, (msg.to_object(py), recv.into_py(py), py.None())));
+        std::thread::spawn(move || {
+            let rec = rx.recv_timeout(Duration::from_secs(15));
+            let r = match rec {
+                Ok(resp) => Some(resp),
+                Err(e) => {
+                    eprintln!("{:#?}", e);
+                    None
+                }
+            };
+            tx_cb.send(r);
+        });
+        let res =
+            Python::with_gil(|py| self.call(py, (msg.to_object(py), py.None(), recv.into_py(py), )));
         match res {
             Ok(r) => {}
             Err(_) => {

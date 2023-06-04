@@ -6,46 +6,7 @@
 
 # spvn
 
-spvn is a work in progress project which seeks to bring rust asgi bindings into python. it is in progress, contributions & development are welcome
-
-## ASGI State Management
-
-```mermaid
-
-stateDiagram-v2
-    Request--> Bytes
-    Bytes --> PyDelayed(receive)
-    PyDelayed(receive) --> PyFuture(received)
-    PyFuture(received) --> PythonPtr(bytes)
-
-    PythonPtr(bytes) --> ASGI
-    PythonPtr(received) --> ASGI
-    PythonPtr(scope) --> ASGI
-
-    Request --> asgi_from_request
-    asgi_from_request --> PythonPtr(scope)
-
-    Send --> SendReceiver
-    Send --> PyDelayed(send)
-    PyDelayed(send) --> PyFuture(sent)
-    PyFuture(sent) --> None
-
-
-    PyDelayed(scope) --> Caller.call
-    PyDelayed(send) --> Caller.call
-    PyDelayed(receive) --> Caller.call
-
-    Caller.call --> await
-
-    ASGI --> SendReceiver
-
-    SendReceiver --> ReceiveStart
-    SendReceiver --> ReceiveBody
-
-    ReceiveStart --> Response
-    ReceiveBody --> Response
-
-```
+spvn seeks to bring rust asgi bindings into python. it is in progress, contributions & development are welcome
 
 ## Project Status
 
@@ -60,14 +21,14 @@ Roughly in order of priority
 - [🚧] Standard asgi traits & structs
   - [🚧] ASGIScope
     - [✅] (rust) Async safe integration
-    - [🚧] Conversion from `tower::Body` -> `dict`
+    - [✅] Conversion from `tower::Body` -> `dict`
   - [✅] ASGIVersion
-  - [🚧] ASGIMessage
+  - [✅] ASGIMessage
     - [✅] Lifecycle Scope
     - [✅] HTTP Lifecycle Scope
     - [🚧] Websockets (msg integration)
 - [✅] App listener
-- [🚧] App dispatcher
+- [✅] App dispatcher
   - [✅] Async threadsafe
   - [🚧] Lifecycle activation for caller objects
 - [🚧] App scheduler
@@ -111,24 +72,24 @@ This is a <i>very</i> preliminary implementation of the caller protocol using as
 
 #### Visualization
 
-Tests performed using [ali](https://github.com/nakabonne/ali). See [perf/ali](./perf/ali/README.md) for methodology.
+Tests performed using [ali](https://github.com/nakabonne/ali). See [ali](./ali/README.md) for methodology.
 
-![spvn-5000](./perf/ali/spvn-5000.png)
+![spvn-5000](./ali/spvn-5000.png)
 _spvn @ 5000 reqs/s_
 
-![spvn-5000](./perf/ali/spvn-10000.png)
+![spvn-5000](./ali/spvn-10000.png)
 _spvn @ 10000 reqs/s_
 
-![uvicorn-1000](./perf/ali/uvicorn-1000.png)
+![uvicorn-1000](./ali/uvicorn-1000.png)
 _uvicorn @ 1000 reqs/s_
 
-![uvicorn-5000](./perf/ali/uvicorn-5000.png)
+![uvicorn-5000](./ali/uvicorn-5000.png)
 _uvicorn @ 5000 reqs/s (DDOS Success)_
 
-![hypercorn-5000](./perf/ali/hypercorn-1000.png)
+![hypercorn-5000](./ali/hypercorn-1000.png)
 _hypercorn @ 1000 reqs/s_
 
-![hypercorn-5000](./perf/ali/hypercorn-5000.png)
+![hypercorn-5000](./ali/hypercorn-5000.png)
 _hypercorn @ 5000 reqs/s (DDOS Success)_
 
 ## Developing
