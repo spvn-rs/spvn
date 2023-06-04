@@ -9,10 +9,10 @@ async def dependent_start_task() -> DB:
     return DB(cx_id='123')
 
 async def app(scope=None, receive=None, send=None):
-    if scope['type'] == 'lifecycle.startup':
+    if scope['type'] == 'lifespan.startup':
         asyncio.run(dependent_start_task())
         return await send({
-            'type': 'lifecycle.startup.success',
+            'type': 'lifespan.startup.success',
         })
     await receive()
     await send({

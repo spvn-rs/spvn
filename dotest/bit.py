@@ -10,7 +10,6 @@ async def run_something():
 
 
 async def send(a):
-    # raise ValueError(a)
     print('send', a)
 
 async def receive(**a):
