@@ -1,5 +1,14 @@
-async def app(scope=None, receive=None, send=None):
-    received = await receive()
-    awa2 = await send({"type": "http.response.start", "headers": [(b"av", b"b")], "status": 200})
-    awa2 = await send({"type": "http.response.body", "headers": [(b"a", b"b")], "body": b"okok"})
-    return 1
+async def app(scope, receive, send):
+    assert scope['type'] == 'http'
+
+    await send({
+        'type': 'http.response.start',
+        'status': 200,
+        'headers': [
+            (b'content-type', b'text/plain'),
+        ],
+    })
+    await send({
+        'type': 'http.response.body',
+        'body': b'Hello, world!',
+    })

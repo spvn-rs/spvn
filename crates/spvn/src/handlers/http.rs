@@ -80,6 +80,15 @@ fn bail_py(err: PyErr) -> Ra {
     bail()
 }
 
+struct SendResponse<'a>(&'a std::sync::Mutex<Option<(Builder, Bytes)>>);
+
+impl<'a> SendResponse<'a> {
+    fn replace(&mut self, other: Option<(Builder, Bytes)>) {
+        let mut state = self.0.lock().unwrap();
+        *state = other;
+    }
+}
+
 impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
     type Response = Response<Full<Bytes>>;
     type Error = hyper::Error;
@@ -99,7 +108,10 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             // let final =
             let (tx_bdy, rx_bdy) = crossbeam::channel::bounded::<ASGIResponse>(4);
             let (tx_builder, rx_builder) = crossbeam::channel::bounded::<(Builder, Bytes)>(1);
-            let _captured: Mutex<Option<String>> = Mutex::new(None);
+            let resp_mu: Arc<std::sync::Mutex<Option<(Builder, Bytes)>>> =
+                Arc::new(std::sync::Mutex::new(None));
+            // let mut sr = SendResponse(&*resp_mu);
+
             tokio::spawn(async move {
                 while let Ok(resp) = rx_bdy.recv() {
                     let mut state = state.lock().await;
@@ -107,15 +119,16 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
                 }
                 let state = state.lock().await;
                 let response = coalesced::coslesce_from_state(&state, Response::builder(), true);
+                // sr.replace(Some(response));
+
                 // captured = Some("".to_string());
                 let res = tx_builder.send(response);
 
-                match res {
-                    Ok(_r) => (),
-                    Err(_e) => panic!("couldnt send response to channel"),
-                }
+                // match res {
+                //     Ok(_r) => (),
+                //     Err(_e) => panic!("couldnt send response to channel"),
+                // }
             });
-
             let sender = Sender::new(tx_bdy);
 
             let _bail_super = || return bail();
@@ -155,24 +168,28 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
                 }
             }
 
-            match rx_builder.recv_timeout(Duration::from_millis(100)) {
-                Ok((builder, body)) => {
-                    let resp = builder.body(Full::new(body)).unwrap();
-
-                    // #[cfg(debug_assertions)]
-                    // {
-                    //     println!("{:#?}", resp)
-                    // }
-                    return Ok(resp);
-                }
-                Err(e) => {
-                    #[cfg(debug_assertions)]
-                    {
-                        eprintln!("the receiver timed out {:#?}", e)
-                    }
-                    return bail();
-                }
+            match rx_builder.recv() {
+                Ok((builder, bts)) => return Ok(builder.body(Full::new(bts)).unwrap()),
+                Err(_) => return bail(),
             }
+            // match (*resp_mu).lock().unwrap().take() {
+            //     Some((builder, body)) => {
+            //         let resp = builder.body(Full::new(body)).unwrap();
+
+            //         // #[cfg(debug_assertions)]
+            //         // {
+            //         //     println!("{:#?}", resp)
+            //         // }
+            //         return Ok(resp);
+            //     }
+            //     None => {
+            //         #[cfg(debug_assertions)]
+            //         {
+            //             eprintln!("the receiver failed")
+            //         }
+            //         return bail();
+            //     }
+            // }
         }
 
         let hm: StateMap = StateMap::default();

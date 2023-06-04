@@ -102,8 +102,6 @@ async fn loop_passthru(
         let bi = bi.clone();
         let scheduler = scheduler.clone();
         let fut = async move {
-            eprintln!("serving");
-
             if let Err(err) = Http::new()
                 .serve_connection(stream, Box::pin(Bridge::new(bi, scheduler.clone())))
                 .await

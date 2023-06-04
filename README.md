@@ -109,6 +109,28 @@ Delegation of connection multiplex, stream, and IO processes into Rust, and auto
 
 This is a <i>very</i> preliminary implementation of the caller protocol using async processes.
 
+#### Visualization
+
+Tests performed using [ali](https://github.com/nakabonne/ali). See [perf/ali](./perf/ali/README.md) for methodology.
+
+![spvn-5000](./perf/ali/spvn-5000.png)
+_spvn @ 5000 reqs/s_
+
+![spvn-5000](./perf/ali/spvn-10000.png)
+_spvn @ 10000 reqs/s_
+
+![uvicorn-1000](./perf/ali/uvicorn-1000.png)
+_uvicorn @ 1000 reqs/s_
+
+![uvicorn-5000](./perf/ali/uvicorn-5000.png)
+_uvicorn @ 5000 reqs/s (DDOS Success)_
+
+![hypercorn-5000](./perf/ali/hypercorn-1000.png)
+_hypercorn @ 1000 reqs/s_
+
+![hypercorn-5000](./perf/ali/hypercorn-5000.png)
+_hypercorn @ 5000 reqs/s (DDOS Success)_
+
 ## Developing
 
 ### Pre-requisites
