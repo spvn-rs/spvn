@@ -26,4 +26,4 @@ http = { workspace = true }
 once_cell = { workspace = true }
 tower = { version = "0.4", features = ["make"] }
 tokio-rustls = "0.24"
-rustls-pemfile = "0.3"
+rustls-pemfile = "1.0"
