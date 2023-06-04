@@ -1,3 +1,4 @@
+use colored::Colorize;
 use core::result::Result::Ok;
 // use cpython::{PyErr, PyString, Python};
 // use cpython::{
@@ -93,6 +94,13 @@ fn import<'a, 'b>(
     info!("package to load {:}", pkg);
 
     let parent = path.parent().unwrap().as_os_str().to_str().unwrap();
+    let is_venv = env::var("VIRTUAL_ENV");
+    if is_venv.is_ok() {
+        append_to_py_path(py, is_venv.clone().unwrap().as_str());
+        info!("{} - adding to py path", "venv found".green(),);
+    } else {
+        info!("{}", "venv not found".yellow());
+    }
 
     let target = init_module(py, pkg, parent);
 
@@ -116,7 +124,7 @@ fn import<'a, 'b>(
     }
 }
 
-fn init_module<'a>(py: Python<'a>, name: &str, path: &str) -> &'a PyModule {
+fn append_to_py_path<'a>(py: Python<'a>, path: &str) {
     let py_pt = path.to_object(py).into_ptr();
     unsafe {
         let name = CString::new("path").unwrap();
@@ -127,6 +135,10 @@ fn init_module<'a>(py: Python<'a>, name: &str, path: &str) -> &'a PyModule {
         #[cfg(debug_assertions)]
         info!("append to path complete");
     }
+}
+
+fn init_module<'a>(py: Python<'a>, name: &str, path: &str) -> &'a PyModule {
+    append_to_py_path(py, path);
     let result = PyModule::import(py, name);
     pymod_from_result_module(py, result)
 }

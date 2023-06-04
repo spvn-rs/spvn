@@ -18,9 +18,9 @@ unexport CONDA_PREFIX
 vars:
 		export PYO3_PYTHON=./env/bin/python
 lint:
-		black ./**/**.py &&
-		ruff check . --fix &&
-		cargo fmt --fix
+		black ./**/**.py && \
+		ruff check . --fix && \
+		cargo fix --allow-dirty
 prof-bin:
 		cargo instruments --bin spvn \
 			--template sys serve \

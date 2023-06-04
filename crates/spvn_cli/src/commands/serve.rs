@@ -230,12 +230,7 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
         info!("{:#?}", bi)
     }
     let rt = Builder::new_multi_thread().enable_all().build().unwrap();
-
-    let r = rt.block_on(async move {
-        // let cfg: SpvnCfg = arguments.clone().into();
-        // let mut own: Spvn = cfg.into();
-        //
-        // own.service(0).await
+    let _result = rt.block_on(async move {
         let mut handlers = Vec::new();
         for i in 0..arguments.n_threads {
             let cfg: SpvnCfg = arguments.clone().into();
@@ -246,31 +241,5 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
         }
         futures::future::select_all(handlers).await
     });
-
-    // let mut caller = PySpawn::new();
-    // caller.spawn(arguments.n_threads);
-    // info!("{}", tgt);
-    // let st = std::time::Instant::now();
-
-    // caller.call(|py| {
-    //     let scope = ASGIScope::mock();
-    //     let kwargs = PyDict::new(py);
-    //     fn send(py: Python, scope: PyDict) -> PyResult<PyNone> {
-    //         #[cfg(debug_assertions)]
-    //         info!("{:#?}", scope.items(py));
-    //         Ok(PyNone)
-    //     }
-
-    //     fn receive(_: Python) -> PyResult<Vec<u8>> {
-    //         Ok(vec![1, 2, 3])
-    //     }
-    //     kwargs.set_item(py, "scope", scope.to(py));
-    //     kwargs.set_item(py, "send", py_fn!(py, send(scope: PyDict)));
-    //     kwargs.set_item(py, "receive", py_fn!(py, receive()));
-    //     kwargs
-    // });
-    // let end = std::time::Instant::now();
-
-    // info!("call time: {:#?}", end.duration_since(st));
     Result::Ok(ExitStatus::Success)
 }

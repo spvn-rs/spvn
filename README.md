@@ -6,7 +6,7 @@
 
 # spvn
 
-spvn is a work in progress project which seeks to bring rust asgi bindings into python. it is in progress, contributions & development are welcome
+spvn seeks to bring rust asgi bindings into python. it is in progress, contributions & development are welcome
 
 ## ASGI State Management
 
@@ -60,14 +60,14 @@ Roughly in order of priority
 - [🚧] Standard asgi traits & structs
   - [🚧] ASGIScope
     - [✅] (rust) Async safe integration
-    - [🚧] Conversion from `tower::Body` -> `dict`
+    - [✅] Conversion from `tower::Body` -> `dict`
   - [✅] ASGIVersion
-  - [🚧] ASGIMessage
+  - [✅] ASGIMessage
     - [✅] Lifecycle Scope
     - [✅] HTTP Lifecycle Scope
     - [🚧] Websockets (msg integration)
 - [✅] App listener
-- [🚧] App dispatcher
+- [✅] App dispatcher
   - [✅] Async threadsafe
   - [🚧] Lifecycle activation for caller objects
 - [🚧] App scheduler
@@ -111,24 +111,24 @@ This is a <i>very</i> preliminary implementation of the caller protocol using as
 
 #### Visualization
 
-Tests performed using [ali](https://github.com/nakabonne/ali). See [perf/ali](./perf/ali/README.md) for methodology.
+Tests performed using [ali](https://github.com/nakabonne/ali). See [docs/ali](./docs/ali/README.md) for methodology.
 
-![spvn-5000](./perf/ali/spvn-5000.png)
+![spvn-5000](./docs/ali/spvn-5000.png)
 _spvn @ 5000 reqs/s_
 
-![spvn-5000](./perf/ali/spvn-10000.png)
+![spvn-5000](./docs/ali/spvn-10000.png)
 _spvn @ 10000 reqs/s_
 
-![uvicorn-1000](./perf/ali/uvicorn-1000.png)
+![uvicorn-1000](./docs/ali/uvicorn-1000.png)
 _uvicorn @ 1000 reqs/s_
 
-![uvicorn-5000](./perf/ali/uvicorn-5000.png)
+![uvicorn-5000](./docs/ali/uvicorn-5000.png)
 _uvicorn @ 5000 reqs/s (DDOS Success)_
 
-![hypercorn-5000](./perf/ali/hypercorn-1000.png)
+![hypercorn-5000](./docs/ali/hypercorn-1000.png)
 _hypercorn @ 1000 reqs/s_
 
-![hypercorn-5000](./perf/ali/hypercorn-5000.png)
+![hypercorn-5000](./docs/ali/hypercorn-5000.png)
 _hypercorn @ 5000 reqs/s (DDOS Success)_
 
 ## Developing

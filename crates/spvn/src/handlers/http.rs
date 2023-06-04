@@ -103,7 +103,7 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             // let final =
             let (tx_bdy, rx_bdy) = crossbeam::channel::bounded::<ASGIResponse>(4);
             let (tx_builder, rx_builder) = crossbeam::channel::bounded::<(Builder, Bytes)>(1);
-            let resp_mu: Arc<std::sync::Mutex<Option<(Builder, Bytes)>>> =
+            let _resp_mu: Arc<std::sync::Mutex<Option<(Builder, Bytes)>>> =
                 Arc::new(std::sync::Mutex::new(None));
             // let mut sr = SendResponse(&*resp_mu);
 
@@ -117,7 +117,7 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
                 // sr.replace(Some(response));
 
                 // captured = Some("".to_string());
-                let res = tx_builder.send(response);
+                let _res = tx_builder.send(response);
 
                 // match res {
                 //     Ok(_r) => (),
@@ -153,7 +153,7 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
             match join_caller {
                 Ok(call) => match call {
                     Ok(_) => (),
-                    Err(pye) => {
+                    Err(_pye) => {
                         // eprintln!("{:#?}", pye);
                         return bail();
                     }

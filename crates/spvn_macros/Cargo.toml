@@ -10,7 +10,7 @@ crate-type = ["proc-macro"]
 
 [dependencies]
 simple_logger = { workspace = true }
-log = { workspace = true, features = ["max_level_error"]  }
+log = { workspace = true  }
 colored = { workspace = true }
 syn = "1.0"
 quote = "1.0"

@@ -8,5 +8,5 @@ rust-version = { workspace = true }
 [dependencies]
 
 simple_logger = { workspace = true }
-log = { workspace = true, features = ["max_level_error"]  }
+log = { workspace = true  }
 colored = { workspace = true }

@@ -7,14 +7,14 @@ edition = { workspace = true }
 [lib]
 crate-type = ["rlib"]
 
-#, features = ["max_level_error"]
+#
 
 [dependencies]
 http = { workspace = true }
 ahash = { workspace = true }
 hyper = { workspace = true, features = ["full"] }
 
-log = { workspace = true, features = ["max_level_error"]  }
+log = { workspace = true  }
 bytes = { workspace = true }
 bytes-expand = { workspace = true }
 pyo3 = {workspace = true}
