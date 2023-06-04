@@ -1326,7 +1326,7 @@ dependencies = [
  "pyo3",
  "quote",
  "simple_logger",
- "syn 1.0.109",
+ "syn 2.0.18",
  "tokio",
 ]
 
