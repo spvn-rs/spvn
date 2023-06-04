@@ -10,7 +10,6 @@ use pyo3::Python;
 use tokio_rustls::rustls::ServerConfig;
 
 use crate::handlers::http::Bridge;
-use crate::startup::tls;
 
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
