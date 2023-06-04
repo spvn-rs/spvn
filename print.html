@@ -1,0 +1,372 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>spvn</title>
+        <meta name="robots" content="noindex" />
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = null;
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="INTRO.html"><strong aria-hidden="true">1.</strong> Intro</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">spvn</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <p><a href="https://github.com/charliermarsh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json" alt="Ruff" /></a>
+<a href="https://pypi.org/project/spvn"><img src="https://img.shields.io/pypi/pyversions/spvn.svg?style=flat-square" alt="PyPI - Python Version" /></a>
+<a href="https://pypi.org/project/spvn"><img src="https://img.shields.io/pypi/wheel/spvn?style=flat-square" alt="Wheel" /></a></p>
+<hr />
+<h1 id="spvn"><a class="header" href="#spvn">spvn</a></h1>
+<p>spvn is a work in progress project which seeks to bring rust asgi bindings into python. it is in progress, contributions &amp; development are welcome</p>
+<h2 id="asgi-state-management"><a class="header" href="#asgi-state-management">ASGI State Management</a></h2>
+<pre><code class="language-mermaid">
+stateDiagram-v2
+    Request--&gt; Bytes
+    Bytes --&gt; PyDelayed(receive)
+    PyDelayed(receive) --&gt; PyFuture(received)
+    PyFuture(received) --&gt; PythonPtr(bytes)
+
+    PythonPtr(bytes) --&gt; ASGI
+    PythonPtr(received) --&gt; ASGI
+    PythonPtr(scope) --&gt; ASGI
+
+    Request --&gt; asgi_from_request
+    asgi_from_request --&gt; PythonPtr(scope)
+
+    Send --&gt; SendReceiver
+    Send --&gt; PyDelayed(send)
+    PyDelayed(send) --&gt; PyFuture(sent)
+    PyFuture(sent) --&gt; None
+
+
+    PyDelayed(scope) --&gt; Caller.call
+    PyDelayed(send) --&gt; Caller.call
+    PyDelayed(receive) --&gt; Caller.call
+
+    Caller.call --&gt; await
+
+    ASGI --&gt; SendReceiver
+
+    SendReceiver --&gt; ReceiveStart
+    SendReceiver --&gt; ReceiveBody
+
+    ReceiveStart --&gt; Response
+    ReceiveBody --&gt; Response
+
+</code></pre>
+<h2 id="project-status"><a class="header" href="#project-status">Project Status</a></h2>
+<p>Roughly in order of priority</p>
+<ul>
+<li>
+<p>[✅] Integrate standard import semantics</p>
+</li>
+<li>
+<p>[✅] PyCaller</p>
+<ul>
+<li>[✅] (rust) Async safe integration</li>
+<li>[✅] Abstract (py fn) async / sync handle</li>
+<li>[✅] Caller pool [this will be revised, its too slow]</li>
+</ul>
+</li>
+<li>
+<p>[🚧] Standard asgi traits &amp; structs</p>
+<ul>
+<li>[🚧] ASGIScope
+<ul>
+<li>[✅] (rust) Async safe integration</li>
+<li>[🚧] Conversion from <code>tower::Body</code> -&gt; <code>dict</code></li>
+</ul>
+</li>
+<li>[✅] ASGIVersion</li>
+<li>[🚧] ASGIMessage
+<ul>
+<li>[✅] Lifecycle Scope</li>
+<li>[✅] HTTP Lifecycle Scope</li>
+<li>[🚧] Websockets (msg integration)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>[✅] App listener</p>
+</li>
+<li>
+<p>[🚧] App dispatcher</p>
+<ul>
+<li>[✅] Async threadsafe</li>
+<li>[🚧] Lifecycle activation for caller objects</li>
+</ul>
+</li>
+<li>
+<p>[🚧] App scheduler</p>
+<ul>
+<li>[✅] Injectable <code>awaitables</code> (rust ptr -&gt; python ptr)</li>
+<li>[✅] Async threadsafe</li>
+<li>[✅] Delayed py-fn call</li>
+<li>[🚧] Scheduler into py</li>
+</ul>
+</li>
+<li>
+<p>[🚧] Live reloader</p>
+</li>
+<li>
+<p>[🚧] Websockets</p>
+</li>
+</ul>
+<h2 id="rationale--goals"><a class="header" href="#rationale--goals">Rationale &amp; Goals</a></h2>
+<ul>
+<li>Relieve limits by python in networking applications
+<ul>
+<li>The goal is not to create the 'fastest' ASGI server, but reliable ASGI services which don't drop calls when subject to extreme concurrency</li>
+</ul>
+</li>
+<li>Safe python threadpooling unmanaged by GIL runtime</li>
+</ul>
+<h3 id="claims"><a class="header" href="#claims">Claims</a></h3>
+<p>The upper bounds of python concurrency are not <i>really</i> production ready</p>
+<h4 id="rationale"><a class="header" href="#rationale">Rationale</a></h4>
+<ul>
+<li>Uvicorn drops requests &amp; stalls on IO &gt; 7500 concurrent clients</li>
+<li>Hypercorn drops requests &amp; stalls on IO &gt; 7500 concurrent clients</li>
+</ul>
+<p>In both, we must horizontally scale to accomodate these limits in our systems. This is further accompanied by essentially a second layer of IO bound processes, which are evidently unable to maintain highly concurrent environments</p>
+<h4 id="proposed"><a class="header" href="#proposed">Proposed</a></h4>
+<p>Delegation of connection multiplex, stream, and IO processes into Rust, and autoinjection at runtime following standard ASGI protocol.</p>
+<h3 id="preliminary-tests"><a class="header" href="#preliminary-tests">Preliminary Tests</a></h3>
+<ul>
+<li>perf has test files containing basic benchmarks
+<ul>
+<li>hypercorn @ 1 worker = 683402-788307 ns</li>
+<li>spvn -&gt; py @ 1 worker = 159201-221808 ns</li>
+</ul>
+</li>
+</ul>
+<p>This is a <i>very</i> preliminary implementation of the caller protocol using async processes.</p>
+<h4 id="visualization"><a class="header" href="#visualization">Visualization</a></h4>
+<p>Tests performed using <a href="https://github.com/nakabonne/ali">ali</a>. See <a href="./perf/ali/README.html">perf/ali</a> for methodology.</p>
+<p><img src="./perf/ali/spvn-5000.png" alt="spvn-5000" />
+<em>spvn @ 5000 reqs/s</em></p>
+<p><img src="./perf/ali/spvn-10000.png" alt="spvn-5000" />
+<em>spvn @ 10000 reqs/s</em></p>
+<p><img src="./perf/ali/uvicorn-1000.png" alt="uvicorn-1000" />
+<em>uvicorn @ 1000 reqs/s</em></p>
+<p><img src="./perf/ali/uvicorn-5000.png" alt="uvicorn-5000" />
+<em>uvicorn @ 5000 reqs/s (DDOS Success)</em></p>
+<p><img src="./perf/ali/hypercorn-1000.png" alt="hypercorn-5000" />
+<em>hypercorn @ 1000 reqs/s</em></p>
+<p><img src="./perf/ali/hypercorn-5000.png" alt="hypercorn-5000" />
+<em>hypercorn @ 5000 reqs/s (DDOS Success)</em></p>
+<h2 id="developing"><a class="header" href="#developing">Developing</a></h2>
+<h3 id="pre-requisites"><a class="header" href="#pre-requisites">Pre-requisites</a></h3>
+<h4 id="python--39"><a class="header" href="#python--39">Python &gt;= 3.9</a></h4>
+<ol>
+<li>Use virtualenv / venv</li>
+</ol>
+<pre><code class="language-bash">python3.10 -m (venv|virtualenv) env &amp;&amp; \
+        . ./env/bin/activate &amp;&amp; \
+        pip install maturin
+</code></pre>
+<ol start="2">
+<li>Test bindings by running</li>
+</ol>
+<pre><code class="language-bash">maturin develop
+</code></pre>
+<h4 id="rust--1690"><a class="header" href="#rust--1690">Rust &gt;= 1.69.0</a></h4>
+<ul>
+<li>Build CLI</li>
+</ul>
+<pre><code class="language-bash">cargo build
+</code></pre>
+<ul>
+<li>Run CLI</li>
+</ul>
+<pre><code class="language-bash">target/debug/spvn serve dotest.foo:app
+</code></pre>
+<h2 id="pypi"><a class="header" href="#pypi">pypi</a></h2>
+<p><a href="https://pypi.org/project/spvn"><img src="https://img.shields.io/pypi/v/spvn.svg?style=flat-square" alt="PyPI - Version" /></a></p>
+<p>-&gt; <code>pip install spvn</code></p>
+<p>-&gt; <code>spvn serve foo.bar:app</code> (dev)</p>
+<h2 id="crates"><a class="header" href="#crates">crates</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>spvn</th><th><a href="https://crates.io/crates/spvn"><img src="https://img.shields.io/crates/v/spvn.svg?style=flat-square" alt="Crates.io" /></a></th></tr></thead><tbody>
+<tr><td>spvn_caller</td><td><a href="https://crates.io/crates/spvn_caller"><img src="https://img.shields.io/crates/v/spvn_caller.svg?style=flat-square" alt="Crates.io" /></a></td></tr>
+<tr><td>spvn_listen</td><td><a href="https://crates.io/crates/spvn_listen"><img src="https://img.shields.io/crates/v/spvn_listen.svg?style=flat-square" alt="Crates.io" /></a></td></tr>
+<tr><td>spvn_lifespan</td><td><a href="https://crates.io/crates/spvn_lifespan"><img src="https://img.shields.io/crates/v/spvn_lifespan.svg?style=flat-square" alt="Crates.io" /></a></td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </div>
+    </body>
+</html>
