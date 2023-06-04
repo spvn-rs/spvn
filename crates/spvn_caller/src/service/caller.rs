@@ -4,14 +4,14 @@
 // use cpython::{PyDict, PyObject, Python, _detail::ffi::PyAsyncMethods};
 
 use crate::service::lifespan::{LifeSpan, LifeSpanError, LifeSpanState};
-use crossbeam::thread;
+
 use log::{info, warn};
 use pyo3::exceptions::*;
 use pyo3::ffi::Py_None;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use spvn_serde::{
-    asgi_scope::{ASGIEvent, ASGIScope},
+    asgi_scope::{ASGIEvent},
     sender::Sender,
     ASGIResponse, ASGIType,
 };
@@ -89,9 +89,9 @@ impl LifeSpan for Caller {
             tx_cb.send(r);
         });
         let res =
-            Python::with_gil(|py| self.call(py, (msg.to_object(py), py.None(), recv.into_py(py), )));
+            Python::with_gil(|py| self.call(py, (msg.to_object(py), py.None(), recv.into_py(py))));
         match res {
-            Ok(r) => {}
+            Ok(_r) => {}
             Err(_) => {
                 warn!("attempt to start lifespan failed");
                 return Err(LifeSpanError::LifeSpanStartFailure);

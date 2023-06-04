@@ -15,8 +15,6 @@ use pyo3::{
     types::{PyBytes, PyDict},
 };
 
-
-
 /// Implementation per
 /// [specification](https://asgi.readthedocs.io/en/latest/specs/www.html)
 ///
