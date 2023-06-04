@@ -21,7 +21,10 @@ use pyo3::{
 /// **ASGIv2.3**
 #[derive(Eq, Debug, Clone, PartialEq, PartialOrd, Ord)]
 pub enum ASGIType {
-    // lifecycle
+    /// Anon lifespan event managed by the application
+    Lifespan,
+
+    /// Lifecycle evts
     LifecycleStartup,
     LifecycleShutdown,
     LifecycleStartupSuccess,
@@ -29,6 +32,7 @@ pub enum ASGIType {
     LifecycleShutdownSuccess,
     LifecycleShutdownFailure,
 
+    /// http events
     HTTPResponseStart,
     HTTPResponseBody,
     HTTPResponseTrailers,
@@ -42,11 +46,14 @@ impl ASGIType {
     pub fn from(value: String) -> Result<Self, ()> {
         let s = value.to_lowercase();
         let ma = match s.as_str() {
-            "lifecycle.startup.success" => ASGIType::LifecycleStartupSuccess,
-            "lifecycle.startup.failure" => ASGIType::LifecycleStartupFailure,
+            // <2.0
+            "lifespan.startup.complete" => ASGIType::LifecycleStartupSuccess,
+            // 2.2
+            "lifespan.startup.success" => ASGIType::LifecycleStartupSuccess,
+            "lifespan.startup.failure" => ASGIType::LifecycleStartupFailure,
 
-            "lifecycle.shutdown.success" => ASGIType::LifecycleShutdownSuccess,
-            "lifecycle.shutdown.failure" => ASGIType::LifecycleShutdownFailure,
+            "lifespan.shutdown.success" => ASGIType::LifecycleShutdownSuccess,
+            "lifespan.shutdown.failure" => ASGIType::LifecycleShutdownFailure,
 
             "http.response.start" => ASGIType::HTTPResponseStart,
             "http.response.body" => ASGIType::HTTPResponseBody,
@@ -65,12 +72,13 @@ impl ASGIType {
 impl Into<&str> for ASGIType {
     fn into(self) -> &'static str {
         match self {
-            ASGIType::LifecycleStartup => "lifecycle.startup",
-            ASGIType::LifecycleShutdown => "lifecycle.shutdown",
-            ASGIType::LifecycleStartupSuccess => "lifecycle.startup.success",
-            ASGIType::LifecycleStartupFailure => "lifecycle.startup.failure",
-            ASGIType::LifecycleShutdownSuccess => "lifecycle.shutdown.success",
-            ASGIType::LifecycleShutdownFailure => "lifecycle.shutdown.failure",
+            ASGIType::Lifespan => "lifespan",
+            ASGIType::LifecycleStartup => "lifespan.startup",
+            ASGIType::LifecycleShutdown => "lifespan.shutdown",
+            ASGIType::LifecycleStartupSuccess => "lifespan.startup.success",
+            ASGIType::LifecycleStartupFailure => "lifespan.startup.failure",
+            ASGIType::LifecycleShutdownSuccess => "lifespan.shutdown.success",
+            ASGIType::LifecycleShutdownFailure => "lifespan.shutdown.failure",
             ASGIType::HTTPResponseStart => "http.response.start",
             ASGIType::HTTPResponseBody => "http.response.body",
             ASGIType::HTTPResponseTrailers => "http.response.trailers",

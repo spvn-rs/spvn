@@ -10,11 +10,7 @@ use pyo3::exceptions::*;
 use pyo3::ffi::Py_None;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-use spvn_serde::{
-    asgi_scope::{ASGIEvent},
-    sender::Sender,
-    ASGIResponse, ASGIType,
-};
+use spvn_serde::{asgi_scope::ASGIEvent, sender::Sender, ASGIResponse, ASGIType};
 
 use std::{
     cmp::max,
@@ -67,16 +63,17 @@ impl From<Py<PyAny>> for Caller {
 //     dict
 // }
 
-impl LifeSpan for Caller {
-    fn wait_shutdown(&mut self) -> Result<(), LifeSpanError> {
-        self.state.lock().unwrap().wait_shutdown();
-        Ok(())
-    }
-    fn wait_startup(&mut self) -> Result<(), LifeSpanError> {
+impl Caller {
+    fn create_lifespan_handler(
+        &mut self,
+        evt: ASGIType,
+        descr: &str,
+        on_fail: LifeSpanError,
+    ) -> Result<Option<ASGIResponse>, LifeSpanError> {
         let (tx, rx) = crossbeam::channel::bounded::<ASGIResponse>(1);
         let (tx_cb, rx_cb) = crossbeam::channel::bounded::<Option<ASGIResponse>>(1);
         let recv = Sender::new(tx);
-        let msg = ASGIEvent::from(ASGIType::LifecycleStartup);
+        let msg = ASGIEvent::from(evt);
         std::thread::spawn(move || {
             let rec = rx.recv_timeout(Duration::from_secs(15));
             let r = match rec {
@@ -93,20 +90,63 @@ impl LifeSpan for Caller {
         match res {
             Ok(_r) => {}
             Err(_) => {
-                warn!("attempt to start lifespan failed");
-                return Err(LifeSpanError::LifeSpanStartFailure);
+                warn!("attempt to {:} lifespan failed", descr);
+                return Err(on_fail);
             }
         }
-        let rec = rx_cb.recv().unwrap();
-        if rec.is_some() {
-            self.state
-                .lock()
-                .unwrap()
-                .wait_startup()
-                .expect("state could not be updated");
-            return Ok(());
+        let rec: Option<ASGIResponse> = rx_cb.recv().unwrap();
+        Ok(rec)
+    }
+}
+
+impl LifeSpan for Caller {
+    fn wait_anon(&mut self, on_err: LifeSpanError) -> Result<(), LifeSpanError> {
+        let rec = self.create_lifespan_handler(ASGIType::Lifespan, "lifecycle", on_err);
+        match rec {
+            Ok(rec) => {
+                if rec.is_some() {
+                    self.state
+                        .lock()
+                        .unwrap()
+                        .wait_anon(on_err)
+                        .expect("state could not be updated");
+                    return Ok(());
+                } else {
+                    Ok(())
+                }
+            }
+            Err(s) => Err(s),
         }
-        Err(LifeSpanError::LifeSpanStartFailure)
+    }
+    fn wait_shutdown(&mut self) -> Result<(), LifeSpanError> {
+        self.state.lock().unwrap().wait_shutdown();
+        Ok(())
+    }
+    fn wait_startup(&mut self) -> Result<(), LifeSpanError> {
+        let rec = self.create_lifespan_handler(
+            ASGIType::LifecycleStartup,
+            "start",
+            LifeSpanError::LifeSpanStartFailure,
+        );
+        match rec {
+            Ok(re) => {
+                if re.is_some() {
+                    self.state
+                        .lock()
+                        .unwrap()
+                        .wait_startup()
+                        .expect("state could not be updated");
+                }
+                Ok(())
+            }
+            Err(e) => {
+                let re = self.wait_anon(LifeSpanError::LifeSpanStartFailure);
+                match re {
+                    Ok(r) => return Ok(()),
+                    Err(e) => return Err(e),
+                }
+            }
+        }
     }
 }
 
@@ -172,7 +212,10 @@ fn process_async(
                     let o = result.downcast::<PyException>(py);
                     info!("cast into exception {:#?}", o);
                     match o {
-                        Ok(err) => panic!("{:#?}", err),
+                        Ok(err) => {
+                            eprintln!("an exception was uncaught at runtime{:#?}", err);
+                            return Err(err.into());
+                        }
                         Err(ohno) => panic!("{:#?}", ohno),
                     }
                 }
@@ -232,7 +275,7 @@ where
         log::info!("post await {:#?}", hasawait);
         let _obj = match hasawait {
             Ok(obj) => info!("{:#?}", obj),
-            Err(obj) => panic!("{:#?}", obj),
+            Err(obj) => return Err(obj.into()),
         };
         anyhow::Ok(())
     }
