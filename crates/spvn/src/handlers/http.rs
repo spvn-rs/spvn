@@ -1,19 +1,15 @@
 use std::{
     pin::Pin,
     task::{Context, Poll},
-    time::Duration,
 };
 
 use bytes::Bytes;
-
 use colored::Colorize;
 use http::response::Builder;
-// use crossbeam::channel;
 use log::info;
 use pyo3::prelude::*;
 use spvn_serde::{coalesced, receiver::PyAsyncBodyReceiver, state::StateMap, ASGIResponse};
 
-// use cpython::{py_class, PyBytes, PyDict, PyNone, PyResult, Python};
 use crate::handlers::tasks::Scheduler;
 
 use futures::lock::Mutex;
@@ -24,7 +20,6 @@ use hyper::{body::Body as IncomingBody, Request, Response};
 use spvn_caller::service::caller::Call;
 use spvn_caller::service::caller::SyncSafeCaller;
 use spvn_serde::asgi_scope::asgi_from_request;
-use spvn_serde::call_async::IntoPyFuture;
 use spvn_serde::sender::Sender;
 use spvn_serde::state::State;
 

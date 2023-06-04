@@ -3,12 +3,18 @@
 // use cpython::{NoArgs, ObjectProtocol};
 // use cpython::{PyDict, PyObject, Python, _detail::ffi::PyAsyncMethods};
 
-use log::info;
+use crate::service::lifespan::{LifeSpan, LifeSpanError, LifeSpanState};
+use crossbeam::thread;
+use log::{info, warn};
 use pyo3::exceptions::*;
 use pyo3::ffi::Py_None;
 use pyo3::prelude::*;
-
 use pyo3::types::PyTuple;
+use spvn_serde::{
+    asgi_scope::{ASGIEvent, ASGIScope},
+    sender::Sender,
+    ASGIResponse, ASGIType,
+};
 
 use std::{
     cmp::max,
@@ -18,6 +24,7 @@ use std::{
     ptr,
     sync::{Arc, Mutex},
     task::Poll,
+    time::Duration,
 };
 
 use std::marker::PhantomData;
@@ -38,7 +45,7 @@ impl<'a, T> Future for CallFuture<'a, T> {
 }
 
 pub struct Caller {
-    call_ready: bool,
+    state: Arc<Mutex<LifeSpanState>>,
     pub app: Box<PyObject>,
 }
 
@@ -46,7 +53,7 @@ impl From<Py<PyAny>> for Caller {
     fn from(app: Py<PyAny>) -> Self {
         Caller {
             app: Box::new(app),
-            call_ready: true,
+            state: Arc::new(Mutex::new(LifeSpanState::new())),
         }
     }
 }
@@ -59,6 +66,52 @@ impl From<Py<PyAny>> for Caller {
 // pub fn passthru<'a>(py: Python<'a>, dict: &'a PyDict) -> &'a PyDict {
 //     dict
 // }
+
+impl LifeSpan for Caller {
+    fn wait_shutdown(&mut self) -> Result<(), LifeSpanError> {
+        self.state.lock().unwrap().wait_shutdown();
+        Ok(())
+    }
+    fn wait_startup(&mut self) -> Result<(), LifeSpanError> {
+        let (tx, rx) = crossbeam::channel::bounded::<ASGIResponse>(1);
+        let (tx_cb, rx_cb) = crossbeam::channel::bounded::<Option<ASGIResponse>>(1);
+        let recv = Sender::new(tx);
+        let msg = ASGIEvent::from(ASGIType::LifecycleStartup);
+        
+        thread::scope(|s| {
+            s.spawn(|_| {
+                let rec = rx.recv_timeout(Duration::from_secs(15));
+                let r = match rec {
+                    Ok(resp) => Some(resp),
+                    Err(e) => {
+                        eprintln!("{:#?}", e);
+                        None
+                    }
+                };
+                tx_cb.send(r);
+            });
+        })
+        .unwrap();
+        let res = Python::with_gil(|py| self.call(py, (msg.to_object(py), recv.into_py(py), py.None())));
+        match res {
+            Ok(r) => {}
+            Err(_) => {
+                warn!("attempt to start lifespan failed");
+                return Err(LifeSpanError::LifeSpanStartFailure);
+            }
+        }
+        let rec = rx_cb.recv().unwrap();
+        if rec.is_some() {
+            self.state
+                .lock()
+                .unwrap()
+                .wait_startup()
+                .expect("state could not be updated");
+            return Ok(());
+        }
+        Err(LifeSpanError::LifeSpanStartFailure)
+    }
+}
 
 pub trait Call<T>
 where

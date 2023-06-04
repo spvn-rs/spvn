@@ -36,8 +36,11 @@ pub struct ServeArgs {
     #[arg(short, long, value_name = "FILE")]
     pub target: String,
 
-    #[arg(long)]
+    #[arg(conflicts_with = "cpu", long)]
     pub n_threads: Option<usize>,
+
+    #[arg(conflicts_with = "n_threads", long)]
+    pub cpu: Option<bool>,
 
     // Bind a static port and reload on changes
     #[arg(short, long, action = ArgAction::SetTrue)]
@@ -134,7 +137,14 @@ impl ServeArgs {
                 watch: self.watch.unwrap_or(false),
                 ssl_cert_path: self.ssl_cert_file.to_owned(),
                 ssl_key_file: self.ssl_key_file.to_owned(),
-                n_threads: self.n_threads.unwrap_or(1),
+                n_threads: self.n_threads.unwrap_or_else(|| {
+                    if self.cpu.is_some() {
+                        if self.cpu.unwrap() {
+                            return num_cpus::get();
+                        }
+                    }
+                    1
+                }),
             },
             Overrides {},
         )
@@ -221,23 +231,20 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
     }
     let rt = Builder::new_multi_thread().enable_all().build().unwrap();
 
-    rt.block_on(async move {
-        let cfg: SpvnCfg = arguments.clone().into();
-        let mut own: Spvn = cfg.into();
-        own.service(0).await
-        // let mut handlers = Vec::new();
-        // for i in 0..num_cpus::get() {
-        //     let cfg: SpvnCfg = arguments.clone().into();
-        //     let mut own: Spvn = cfg.into();
-        //     own.service(i).await
-        //     // let h = std::thread::spawn(move || {
-        //     //     tokio::spawn(async move { own.service(i).await })
-        //     // });
-        //     // handlers.push(h);
-        // }
-        // for h in handlers {
-        //     h.join().unwrap();
-        // }
+    let r = rt.block_on(async move {
+        // let cfg: SpvnCfg = arguments.clone().into();
+        // let mut own: Spvn = cfg.into();
+        //
+        // own.service(0).await
+        let mut handlers = Vec::new();
+        for i in 0..arguments.n_threads {
+            let cfg: SpvnCfg = arguments.clone().into();
+            let mut own: Spvn = cfg.into();
+
+            let h = tokio::spawn(async move { own.service(i).await });
+            handlers.push(h);
+        }
+        futures::future::select_all(handlers).await
     });
 
     // let mut caller = PySpawn::new();

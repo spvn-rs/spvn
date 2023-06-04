@@ -1237,6 +1237,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "colored",
+ "crossbeam",
  "deadpool",
  "futures",
  "libc",
@@ -1281,6 +1282,7 @@ dependencies = [
  "anyhow",
  "clap",
  "colored",
+ "futures",
  "log",
  "notify",
  "num_cpus",
@@ -1302,17 +1304,6 @@ dependencies = [
  "colored",
  "log",
  "simple_logger",
-]
-
-[[package]]
-name = "spvn_lifespan"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "log",
- "serde",
- "simple_logger",
- "tokio",
 ]
 
 [[package]]

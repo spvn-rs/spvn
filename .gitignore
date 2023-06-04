@@ -17,6 +17,7 @@ target
 .Python
 .venv/
 env/
+book/
 bin/
 build/
 develop-eggs/

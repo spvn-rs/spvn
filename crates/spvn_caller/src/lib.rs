@@ -1,7 +1,7 @@
 pub mod service;
 use std::{env, ops::DerefMut};
 
-use crate::service::imports::resolve_import;
+use crate::service::{imports::resolve_import, lifespan::LifeSpan};
 
 // use cpython::{
 //     ObjectProtocol, PyDict, Python,
@@ -151,10 +151,15 @@ impl PySpawn {
         // Python::with_gil(f)
         // let py = gil.python();
         // let module = ;
-        let caller = match module {
+        let mut caller = match module {
             Ok(asgi_app) => asgi_app,
             Err(_) => panic!("panicked"),
         };
+
+        let startup = (caller).wait_startup();
+
+        println!("lifespan startup complete {:#?}", startup);
+        // caller.
         SyncSafeCaller::new(caller)
     }
 }

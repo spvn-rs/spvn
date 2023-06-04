@@ -1,0 +1,6 @@
+[book]
+authors = ["benefactarch"]
+language = "en"
+multilingual = false
+src = "docs"
+title = "spvn"

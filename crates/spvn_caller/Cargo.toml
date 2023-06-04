@@ -17,11 +17,14 @@ license = "MIT"
 
 pyo3 = {workspace = true, features = []}
 futures = {workspace = true, features = []}
+crossbeam = {workspace = true}
 
 deadpool = { workspace = true }
+
 spvn_cfg = { path = "../spvn_cfg" }
 spvn_serde = { path = "../spvn_serde" }
 spvn_dev = { path = "../spvn_dev" }
+
 syncpool = { version = "0.1.6" }
 async-trait = { workspace = true}
 tokio = { workspace = true }
