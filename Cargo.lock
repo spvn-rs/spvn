@@ -1199,7 +1199,7 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spvn"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1218,7 +1218,6 @@ dependencies = [
  "socket2 0.5.3",
  "spvn_caller",
  "spvn_cfg",
- "spvn_listen",
  "spvn_serde",
  "tokio",
  "tokio-rustls",
@@ -1231,7 +1230,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_caller"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1255,7 +1254,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_cfg"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -1277,7 +1276,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1291,7 +1290,6 @@ dependencies = [
  "spvn",
  "spvn_caller",
  "spvn_cfg",
- "spvn_listen",
  "spvn_serde",
  "tokio",
  "tokio-rustls",
@@ -1299,7 +1297,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_dev"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "colored",
  "log",
@@ -1307,20 +1305,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "spvn_listen"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "hyper",
- "socket2 0.5.3",
- "tokio",
- "tower",
-]
-
-[[package]]
 name = "spvn_macros"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "colored",
  "crossbeam",
@@ -1336,7 +1322,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_py"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1352,7 +1338,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_serde"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ahash",
  "bytes",

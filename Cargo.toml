@@ -4,13 +4,13 @@ members = ["crates/*"]
 
 [workspace.package]
 
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.69.0"
 authors = ["Joshua A. <joshua.auchincloss@proton.me>"]
-homepage = "https://github.com/joshua-auchincloss/spvn"
-documentation = "https://github.com/joshua-auchincloss/spvn"
-repository = "https://github.com/joshua-auchincloss/spvn"
+homepage = "https://spvn-rs.github.io/spvn/"
+documentation = "https://github.com/spvn-rs/spvn"
+repository = "https://github.com/spvn-rs/spvn"
 description = "asgi rust bindings"
 
 

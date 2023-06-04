@@ -1,10 +1,4 @@
-// use cpython::_detail::ffi::Py_None;
-// use cpython::{PyErr};
-// use cpython::{NoArgs, ObjectProtocol};
-// use cpython::{PyDict, PyObject, Python, _detail::ffi::PyAsyncMethods};
-
 use crate::service::lifespan::{LifeSpan, LifeSpanError, LifeSpanState};
-
 use bytes::Bytes;
 use log::{info, warn};
 use pyo3::exceptions::*;

@@ -1,4 +1,5 @@
 use std::{
+    net::SocketAddr,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -36,16 +37,18 @@ pub struct Bridge {
     // ptr only
     scheduler: Arc<Scheduler>,
     cancel: Box<CancellationToken>,
+    peer: SocketAddr,
 }
 
 impl Bridge {
-    pub fn new(caller: Arc<SyncSafeCaller>, scheduler: Arc<Scheduler>) -> Self {
+    pub fn new(caller: Arc<SyncSafeCaller>, scheduler: Arc<Scheduler>, peer: SocketAddr) -> Self {
         let token = CancellationToken::new();
         Self {
             caller: caller,
             // state: Arc::new(Mutex::new(HashMap::new())),
             scheduler: scheduler.clone(),
             cancel: Box::new(token),
+            peer,
         }
     }
 }

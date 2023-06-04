@@ -18,7 +18,6 @@ crate-type = ["rlib"]
 
 [dependencies]
 
-spvn_listen = {path = "../spvn_listen"}
 spvn_caller = {path = "../spvn_caller"}
 spvn_serde = {path = "../spvn_serde"}
 spvn_cfg = {path = "../spvn_cfg"}

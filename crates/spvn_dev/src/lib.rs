@@ -1,3 +1,4 @@
+#[allow(clippy::E0786)]
 use colored::Colorize;
 
 pub fn init_test_hooks() {

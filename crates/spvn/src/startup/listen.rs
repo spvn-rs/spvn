@@ -1,5 +1,4 @@
 use std::net::SocketAddr;
-
 use tokio::net::TcpListener;
 
 pub async fn spawn_so_reuse(addr: SocketAddr) -> TcpListener {
