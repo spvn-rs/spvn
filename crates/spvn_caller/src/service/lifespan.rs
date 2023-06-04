@@ -23,7 +23,7 @@ pub struct LifeSpanState {
 }
 
 impl LifeSpan for LifeSpanState {
-    fn wait_anon(&mut self, which: LifeSpanError) -> Result<(), LifeSpanError> {
+    fn wait_anon(&mut self, _which: LifeSpanError) -> Result<(), LifeSpanError> {
         Ok(())
     }
     fn wait_startup(&mut self) -> Result<(), LifeSpanError> {

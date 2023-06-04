@@ -5,12 +5,15 @@
 
 use crate::service::lifespan::{LifeSpan, LifeSpanError, LifeSpanState};
 
+use bytes::Bytes;
 use log::{info, warn};
 use pyo3::exceptions::*;
 use pyo3::ffi::Py_None;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-use spvn_serde::{asgi_scope::ASGIEvent, sender::Sender, ASGIResponse, ASGIType};
+use spvn_serde::{
+    asgi_scope::ASGIEvent, receiver::PyAsyncBodyReceiver, sender::Sender, ASGIResponse, ASGIType,
+};
 
 use std::{
     cmp::max,
@@ -85,8 +88,16 @@ impl Caller {
             };
             tx_cb.send(r);
         });
-        let res =
-            Python::with_gil(|py| self.call(py, (msg.to_object(py), py.None(), recv.into_py(py))));
+        let res = Python::with_gil(|py| {
+            self.call(
+                py,
+                (
+                    msg.to_object(py),
+                    PyAsyncBodyReceiver { val: Bytes::new() },
+                    recv.into_py(py),
+                ),
+            )
+        });
         match res {
             Ok(_r) => {}
             Err(_) => {
@@ -139,10 +150,10 @@ impl LifeSpan for Caller {
                 }
                 Ok(())
             }
-            Err(e) => {
+            Err(_e) => {
                 let re = self.wait_anon(LifeSpanError::LifeSpanStartFailure);
                 match re {
-                    Ok(r) => return Ok(()),
+                    Ok(_r) => return Ok(()),
                     Err(e) => return Err(e),
                 }
             }

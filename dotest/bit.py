@@ -1,6 +1,6 @@
+import asyncio
 from fastapi import FastAPI
 
-import asyncio
 app = FastAPI()
 
 
@@ -12,16 +12,11 @@ async def run_something():
 async def send(a):
     print('send', a)
 
+
 async def receive(**a):
     print('recv', a)
-
     pass
 
 
 if __name__ == "__main__":
-    asyncio.run(
-    app({
-        "type":"lifespan"
-    }, receive, send)
-    )
-    
+    asyncio.run(app({"type": "lifespan"}, receive, send))

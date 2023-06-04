@@ -48,6 +48,7 @@ impl ASGIType {
         let ma = match s.as_str() {
             // <2.0
             "lifespan.startup.complete" => ASGIType::LifecycleStartupSuccess,
+            "lifespan.shutdown.complete" => ASGIType::LifecycleShutdownSuccess,
             // 2.2
             "lifespan.startup.success" => ASGIType::LifecycleStartupSuccess,
             "lifespan.startup.failure" => ASGIType::LifecycleStartupFailure,
@@ -122,6 +123,7 @@ pub struct ASGIResponse {
     trailers: Option<bool>,
 }
 
+#[derive(Debug)]
 struct AsgiDict<'a>(&'a PyDict);
 
 impl<'a> TryInto<ASGIResponse> for AsgiDict<'a> {
@@ -146,7 +148,7 @@ impl<'a> TryInto<ASGIResponse> for AsgiDict<'a> {
             Err(_) => {
                 #[cfg(debug_assertions)]
                 {
-                    info!("invalid asgi type provided")
+                    info!("invalid asgi type provided {:#?}", self)
                 }
                 return Err(InvalidationRationale {
                     message: String::from("invalid asgi type provided"),
