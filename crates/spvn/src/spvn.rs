@@ -1,6 +1,6 @@
 use crate::handlers::tasks::{Schedule, Scheduler};
 
-use hyper::server::{conn::Http};
+use hyper::server::conn::Http;
 use log::info;
 
 use spvn_caller::PySpawn;
@@ -80,7 +80,10 @@ async fn loop_tls(
         let fut = async move {
             let stream = acceptor.accept(stream).await?;
             if let Err(err) = Http::new()
-                .serve_connection(stream, Box::pin(Bridge::new(bi.clone(), scheduler.clone(), peer)))
+                .serve_connection(
+                    stream,
+                    Box::pin(Bridge::new(bi.clone(), scheduler.clone(), peer)),
+                )
                 .await
             {
                 println!("Failed to serve connection: {:?}", err);
@@ -103,7 +106,10 @@ async fn loop_passthru(
         let scheduler = scheduler.clone();
         let fut = async move {
             if let Err(err) = Http::new()
-                .serve_connection(stream, Box::pin(Bridge::new(bi.clone(), scheduler.clone(), peer)))
+                .serve_connection(
+                    stream,
+                    Box::pin(Bridge::new(bi.clone(), scheduler.clone(), peer)),
+                )
                 .await
             {
                 println!("Failed to serve connection: {:?}", err);
