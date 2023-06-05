@@ -38,10 +38,16 @@ pub struct Bridge {
     scheduler: Arc<Scheduler>,
     cancel: Box<CancellationToken>,
     peer: SocketAddr,
+    server: SocketAddr,
 }
 
 impl Bridge {
-    pub fn new(caller: Arc<SyncSafeCaller>, scheduler: Arc<Scheduler>, peer: SocketAddr) -> Self {
+    pub fn new(
+        caller: Arc<SyncSafeCaller>,
+        scheduler: Arc<Scheduler>,
+        peer: SocketAddr,
+        server: SocketAddr,
+    ) -> Self {
         let token = CancellationToken::new();
         Self {
             caller: caller,
@@ -49,6 +55,7 @@ impl Bridge {
             scheduler: scheduler.clone(),
             cancel: Box::new(token),
             peer,
+            server,
         }
     }
 }
@@ -102,6 +109,8 @@ impl Service<Request<IncomingBody>> for Bridge {
             req: Request<IncomingBody>,
             caller: Arc<SyncSafeCaller>,
             state: State,
+            server: SocketAddr,
+            peer: SocketAddr,
         ) -> Ra {
             // let final =
             let (tx_bdy, rx_bdy) = crossbeam::channel::bounded::<ASGIResponse>(4);
@@ -133,7 +142,7 @@ impl Service<Request<IncomingBody>> for Bridge {
 
             // todo: handle
             let _token = CancellationToken::new();
-            let asgi = asgi_from_request(&req);
+            let asgi = asgi_from_request(&req, server, peer);
 
             let body = body::to_bytes(req.into_body()).await;
             let _b = match body {
@@ -192,6 +201,12 @@ impl Service<Request<IncomingBody>> for Bridge {
 
         let hm: StateMap = StateMap::default();
         let state: State = Arc::new(Mutex::new(hm));
-        Box::pin(mk_response(req, self.caller.clone(), state))
+        Box::pin(mk_response(
+            req,
+            self.caller.clone(),
+            state,
+            self.server,
+            self.peer,
+        ))
     }
 }

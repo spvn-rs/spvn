@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::net::SocketAddr;
 
 use crate::implementation::set_dict_item_feedback;
 use crate::implementation::{ASGIVersions, ASGI_IMPLEMENTATION};
@@ -52,10 +53,10 @@ pub struct ASGIScope {
     query_string: Vec<u8>,
     root_path: String,
     headers: Vec<(String, Vec<u8>)>,
-    client: (String, i64),
-    server: (String, i64),
-    extensions: Option<Vec<(String, Vec<(String, String)>)>>,
-    subprotocols: Option<Vec<String>>,
+    client: (String, u16),
+    server: (String, u16),
+    // extensions: Option<Vec<(String, Vec<(String, String)>)>>,
+    // subprotocols: Option<Vec<String>>,
 }
 
 // as ugly as it is this is faster to serialize than a pyo3 custom class
@@ -74,8 +75,8 @@ impl ASGIScope {
         set_dict_item_feedback(py, &dict, "headers", self.headers);
         set_dict_item_feedback(py, &dict, "client", self.client);
         set_dict_item_feedback(py, &dict, "server", self.server);
-        set_dict_item_feedback(py, &dict, "extensions", self.extensions);
-        set_dict_item_feedback(py, &dict, "subprotocols", self.subprotocols);
+        // set_dict_item_feedback(py, &dict, "extensions", self.extensions);
+        // set_dict_item_feedback(py, &dict, "subprotocols", self.subprotocols);
         dict.to_object(py)
     }
 }
@@ -97,12 +98,13 @@ fn uri_into_scheme(uri: &Uri) -> String {
     String::from(sh.as_str())
 }
 
-pub fn asgi_from_request(req: &Request<IncomingBody>) -> ASGIScope {
-    // let req = req.extensions().clone().get();
+pub fn asgi_from_request(
+    req: &Request<IncomingBody>,
+    server: SocketAddr,
+    peer: SocketAddr,
+) -> ASGIScope {
     let uri = req.uri().clone();
-    // let query_str = uri.query().take();
-    let query = "";
-
+    let query = String::from(uri.query().take().unwrap_or(""));
     let headers: Vec<(String, Vec<u8>)> = req
         .headers()
         .iter()
@@ -111,7 +113,6 @@ pub fn asgi_from_request(req: &Request<IncomingBody>) -> ASGIScope {
             (String::from(name.as_str()), value.as_bytes().to_vec())
         })
         .collect();
-
     let http_version = version_into_string(req.version().clone());
     let method = req.method().to_string();
     let scheme = uri_into_scheme(&uri);
@@ -119,7 +120,6 @@ pub fn asgi_from_request(req: &Request<IncomingBody>) -> ASGIScope {
     let raw_path = Bytes::from(uri.to_string()).to_vec();
     let query_string = Bytes::from(query).to_vec();
     let root_path = String::from(uri.path());
-
     ASGIScope {
         _type: String::from("http"),
         asgi: ASGI_IMPLEMENTATION(),
@@ -131,13 +131,13 @@ pub fn asgi_from_request(req: &Request<IncomingBody>) -> ASGIScope {
         query_string,
         root_path,
         headers,
-        client: (String::from("cli"), 1),
-        server: (String::from("srv"), 1),
-        extensions: Some(vec![(
-            String::from("abd"),
-            vec![(String::from("ext1"), String::from("ext1v"))],
-        )]),
-        subprotocols: Some(vec![String::from("proto1")]),
+        client: (peer.ip().to_string(), peer.port()),
+        server: (server.ip().to_string(), server.port()),
+        // extensions: Some(vec![(
+        //     String::from("abd"),
+        //     vec![(String::from("ext1"), String::from("ext1v"))],
+        // )]),
+        // subprotocols: Some(vec![String::from("proto1")]),
     }
 }
 

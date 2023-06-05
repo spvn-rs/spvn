@@ -80,6 +80,7 @@ async fn loop_tls(
     acceptor: TlsAcceptor,
     bi: Arc<spvn_caller::service::caller::SyncSafeCaller>,
     scheduler: Arc<Scheduler>,
+    server: SocketAddr,
     quiet: bool,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
@@ -88,11 +89,11 @@ async fn loop_tls(
         let bi = bi.clone();
         let scheduler = scheduler.clone();
 
-        let base = Bridge::new(bi.clone(), scheduler.clone(), peer);
+        let service = Bridge::new(bi.clone(), scheduler.clone(), peer, server);
         if !quiet {
             let svc = LogService {
                 target: "bridge",
-                service: Bridge::new(bi.clone(), scheduler.clone(), peer),
+                service,
             };
             let fut = async move {
                 if let Err(err) = Http::new().serve_connection(stream, svc).await {
@@ -104,7 +105,7 @@ async fn loop_tls(
             tokio::spawn(fut);
         } else {
             let fut = async move {
-                if let Err(err) = Http::new().serve_connection(stream, base).await {
+                if let Err(err) = Http::new().serve_connection(stream, service).await {
                     println!("Failed to serve connection: {:?}", err);
                 }
                 Ok(()) as std::io::Result<()>
@@ -118,6 +119,7 @@ async fn loop_passthru(
     listener: TcpListener,
     bi: Arc<spvn_caller::service::caller::SyncSafeCaller>,
     scheduler: Arc<Scheduler>,
+    server: SocketAddr,
     quiet: bool,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
@@ -125,11 +127,11 @@ async fn loop_passthru(
         let bi = bi.clone();
         let scheduler = scheduler.clone();
 
-        let base = Bridge::new(bi.clone(), scheduler.clone(), peer);
+        let service = Bridge::new(bi.clone(), scheduler.clone(), peer, server);
         if !quiet {
             let svc = LogService {
                 target: "bridge",
-                service: Bridge::new(bi.clone(), scheduler.clone(), peer),
+                service,
             };
             let fut = async move {
                 if let Err(err) = Http::new().serve_connection(stream, svc).await {
@@ -141,7 +143,7 @@ async fn loop_passthru(
             tokio::spawn(fut);
         } else {
             let fut = async move {
-                if let Err(err) = Http::new().serve_connection(stream, base).await {
+                if let Err(err) = Http::new().serve_connection(stream, service).await {
                     println!("Failed to serve connection: {:?}", err);
                 }
                 Ok(()) as std::io::Result<()>
@@ -180,12 +182,13 @@ impl Spvn {
                 acceptor,
                 bi,
                 self.scheduler.clone(),
+                addr,
                 self.cfg.quiet,
             )
             .await
         } else {
             crate::startup::message::startup_message(pid, addr, false);
-            loop_passthru(listener, bi, self.scheduler.clone(), self.cfg.quiet).await
+            loop_passthru(listener, bi, self.scheduler.clone(), addr, self.cfg.quiet).await
         }
     }
 
