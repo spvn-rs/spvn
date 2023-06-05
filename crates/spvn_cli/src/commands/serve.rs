@@ -29,9 +29,11 @@ pub struct ServeArgs {
     #[arg(value_name = "py import")]
     pub target: String,
 
+    #[cfg(not(windows))]
     #[arg(long, conflicts_with = "cpu")]
     pub n_threads: Option<usize>,
 
+    #[cfg(not(windows))]
     #[arg(long, conflicts_with = "n_threads",  action = ArgAction::SetTrue)]
     pub cpu: Option<bool>,
 
@@ -105,9 +107,11 @@ pub struct Arguments {
     watch: bool,
     ssl_cert_path: Option<PathBuf>,
     ssl_key_file: Option<PathBuf>,
-    n_threads: usize,
     lifespan: bool,
     quiet: bool,
+
+    #[cfg(not(windows))]
+    n_threads: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -124,6 +128,10 @@ impl ServeArgs {
                 watch: self.watch.unwrap_or(false),
                 ssl_cert_path: self.ssl_cert_file.to_owned(),
                 ssl_key_file: self.ssl_key_file.to_owned(),
+                lifespan: self.lifespan.unwrap_or(false),
+                quiet: !self.verbose.unwrap_or(true),
+                
+                #[cfg(not(windows))]
                 n_threads: self.n_threads.unwrap_or_else(|| {
                     if self.cpu.is_some() {
                         if self.cpu.unwrap() {
@@ -132,8 +140,6 @@ impl ServeArgs {
                     }
                     1
                 }),
-                lifespan: self.lifespan.unwrap_or(false),
-                quiet: !self.verbose.unwrap_or(true),
             },
             Overrides {},
         )
@@ -170,9 +176,11 @@ impl Into<SpvnCfg> for Arguments {
         SpvnCfg {
             tls,
             bind: self.bind,
-            n_threads: self.n_threads,
             lifespan: self.lifespan,
             quiet: self.quiet,
+
+            #[cfg(not(windows))]
+            n_threads: self.n_threads,
         }
     }
 }
@@ -221,11 +229,23 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
     let rt = Builder::new_multi_thread().enable_all().build().unwrap();
     let _result = rt.block_on(async move {
         let mut handlers = Vec::new();
-        for i in 0..arguments.n_threads {
+
+        #[cfg(not(windows))]
+        {
+            for i in 0..arguments.n_threads {
+                let cfg: SpvnCfg = arguments.clone().into();
+                let mut own: Spvn = cfg.into();
+
+                let h = tokio::spawn(async move { own.service(i).await });
+                handlers.push(h);
+            }
+        }
+        #[cfg(windows)]
+        {
             let cfg: SpvnCfg = arguments.clone().into();
             let mut own: Spvn = cfg.into();
 
-            let h = tokio::spawn(async move { own.service(i).await });
+            let h = tokio::spawn(async move { own.service(0).await });
             handlers.push(h);
         }
         futures::future::select_all(handlers).await

@@ -12,11 +12,15 @@ pub async fn spawn_so_reuse(addr: SocketAddr) -> TcpListener {
     )
     .expect("Failed to initialize socket");
 
-    // SO_REUSE_PORT
-    sock.set_reuse_port(true).unwrap();
-    // SO_REUSE_ADDR
-    sock.set_reuse_address(true).unwrap();
-    sock.set_nonblocking(true).unwrap();
+    #[cfg(not(windows))]
+    {
+        // SO_REUSE_PORT
+        sock.set_reuse_port(true).unwrap();
+        // SO_REUSE_ADDR
+        sock.set_reuse_address(true).unwrap();
+        sock.set_nonblocking(true).unwrap();
+    }
+
     sock.bind(&addr.into()).expect("Failed to bind to socket");
     sock.listen(addr.port().into())
         .expect("Failed to initialize listener");
