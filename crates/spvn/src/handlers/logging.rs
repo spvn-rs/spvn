@@ -1,7 +1,8 @@
-use hyper::{body::Body as IncomingBody, Request, Response};
-use std::pin::Pin;
+use colored::Colorize;
+use hyper::{body::Body as IncomingBody, Request};
 use std::task::{Context, Poll};
 use tower_service::Service;
+use tracing::info;
 
 pub struct LogService<S> {
     pub target: &'static str,
@@ -21,8 +22,12 @@ where
     }
 
     fn call(&mut self, request: Request<IncomingBody>) -> Self::Future {
-        // Insert log statement here or other functionality
-        println!("request = {:?}, target = {:?}", request, self.target);
+        info!(
+            "{} - {} - {}",
+            self.target.blue(),
+            request.method().as_str().black(),
+            request.uri().path_and_query().unwrap().as_str().blue(),
+        );
         self.service.call(request)
     }
 }

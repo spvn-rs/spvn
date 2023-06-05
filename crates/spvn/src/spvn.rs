@@ -3,12 +3,12 @@ use crate::handlers::{
     tasks::{Schedule, Scheduler},
 };
 
-use hyper::{server::conn::Http, Body};
-use tracing::{debug, info};
+use hyper::server::conn::Http;
+use tracing::debug;
 
 use spvn_caller::PySpawn;
 
-use futures::{executor, Future};
+use futures::executor;
 use pyo3::Python;
 use tokio_rustls::rustls::ServerConfig;
 
@@ -17,7 +17,6 @@ use spvn_caller::service::lifespan::LifeSpan;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
-use tracing_subscriber::prelude::*;
 
 #[derive(Debug, Clone)]
 pub enum BindMethods {
@@ -96,6 +95,7 @@ async fn loop_tls(
                 service,
             };
             let fut = async move {
+                let stream = acceptor.accept(stream).await?;
                 if let Err(err) = Http::new().serve_connection(stream, svc).await {
                     println!("Failed to serve connection: {:?}", err);
                 }
@@ -105,6 +105,7 @@ async fn loop_tls(
             tokio::spawn(fut);
         } else {
             let fut = async move {
+                let stream = acceptor.accept(stream).await?;
                 if let Err(err) = Http::new().serve_connection(stream, service).await {
                     println!("Failed to serve connection: {:?}", err);
                 }
