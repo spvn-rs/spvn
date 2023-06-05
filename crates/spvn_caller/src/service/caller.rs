@@ -1,14 +1,17 @@
 use crate::service::lifespan::{LifeSpan, LifeSpanError, LifeSpanState};
 use bytes::Bytes;
+use crossbeam_utils::thread;
+use log::debug;
 use log::{info, warn};
 use pyo3::exceptions::*;
 use pyo3::ffi::Py_None;
+use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use spvn_serde::{
-    asgi_scope::ASGIEvent, receiver::PyAsyncBodyReceiver, sender::Sender, ASGIResponse, ASGIType,
+    asgi_scope::ASGIEvent, asgi_sender::Sender, body_receiver::PyAsyncBodyReceiver,
+    event_receiver::PyASyncEventReceiver, event_sender::EventSender, ASGIResponse, ASGIType,
 };
-
 use std::{
     cmp::max,
     future::Future,
@@ -61,46 +64,85 @@ impl From<Py<PyAny>> for Caller {
 // }
 
 impl Caller {
+    fn run_until_complete(&self) {}
+    /// Expected events:
+    /// 1. Send `{ type: lifespan ... }` to app
+    /// 2. App requests 1st receive, which is for passing some blocking awaitable on startup
+    /// 3. The app does its start ops, and sends `{type: lifespan.startup.complete ...}`
+    /// 4. The app takes context within a new loop, which spawns a separate context until the next
+    /// receive event occurs (`await receive()`)
+    /// 5. The app then reports `{type: lifespan.startup.complete ...}`
     fn create_lifespan_handler(
-        &mut self,
+        &self,
         evt: ASGIType,
         descr: &str,
         on_fail: LifeSpanError,
-    ) -> Result<Option<ASGIResponse>, LifeSpanError> {
-        let (tx, rx) = crossbeam::channel::bounded::<ASGIResponse>(1);
-        let (tx_cb, rx_cb) = crossbeam::channel::bounded::<Option<ASGIResponse>>(1);
-        let recv = Sender::new(tx);
-        let msg = ASGIEvent::from(evt);
-        std::thread::spawn(move || {
-            let rec = rx.recv_timeout(Duration::from_secs(15));
-            let r = match rec {
-                Ok(resp) => Some(resp),
-                Err(e) => {
-                    eprintln!("{:#?}", e);
-                    None
+    ) -> Result<(), LifeSpanError> {
+        let scoped = std::thread::scope(|s| {
+            let (tx, rx) = crossbeam::channel::bounded::<ASGIEvent>(2);
+            let (tx_cb, rx_cb) = crossbeam::channel::bounded::<Option<ASGIEvent>>(2);
+            s.spawn(move || {
+                while let Ok(rec) = rx.recv() {
+                    let r = tx_cb.send(Some(rec));
+                    info!("{:#?}", r);
                 }
-            };
-            tx_cb.send(r);
+                let send = tx_cb.send(None);
+                info!("{:#?}", send);
+
+                info!("send complete");
+            });
+            s.spawn(|| {
+                let send = EventSender::new(tx);
+                let scope = ASGIEvent::from(ASGIType::Lifespan);
+                let receive = PyASyncEventReceiver::new(ASGIEvent::from(ASGIType::Lifespan));
+
+                let res = Python::with_gil(|py| {
+                    let result =
+                    self.app
+                        .call(py, (scope.to_object(py), receive, send.into_py(py)), None);
+                let awa = match result {
+                    Ok(succ) => succ,
+                    Err(e) => panic!("{:#?}", e),
+                };
+
+
+                let hasawait = match  awa.call_method0(py, intern!(py, "__await__")) {
+                    Ok(awaitable) => awaitable,
+                    Err(e)=>{
+                        debug!("the provided lifespan is not asgi3 compliant, remediate this by adding `__await__` to your app");
+                        return 
+                    }
+                };
+                info!("await obj {:#?}", hasawait);
+                let mut iterable = match hasawait.call_method0(py, "__next__"){
+                    Ok(iterable) => iterable ,
+                    Err(e) => {
+                        debug!("the provided lifespan is not asgi3 compliant, the returned coroutine_wrapper is missing __next__ attribute");
+                        return 
+                    }
+                };
+
+                loop {
+                    let _ = std::thread::sleep(Duration::from_millis(1000));
+                    let it = iterable.call_method0(py, intern!(py, "__next__"));
+                    match it {
+                        Ok(iter) => {
+                            iterable = iter;
+                        }
+                        Err(e) => {
+                            info!("err received in lifespan {:#?}", e);
+                            break;
+                        }
+                    }
+                }
+                });
+            });
+
+            let rec: Option<ASGIEvent> = rx_cb.recv().unwrap();
+            info!("{:#?}", rec);
+            info!("rec complete");
         });
-        let res = Python::with_gil(|py| {
-            self.call(
-                py,
-                (
-                    msg.to_object(py),
-                    PyAsyncBodyReceiver { val: Bytes::new() },
-                    recv.into_py(py),
-                ),
-            )
-        });
-        match res {
-            Ok(_r) => {}
-            Err(_) => {
-                warn!("attempt to {:} lifespan failed", descr);
-                return Err(on_fail);
-            }
-        }
-        let rec: Option<ASGIResponse> = rx_cb.recv().unwrap();
-        Ok(rec)
+        Ok(())
     }
 }
 
@@ -108,18 +150,7 @@ impl LifeSpan for Caller {
     fn wait_anon(&mut self, on_err: LifeSpanError) -> Result<(), LifeSpanError> {
         let rec = self.create_lifespan_handler(ASGIType::Lifespan, "lifecycle", on_err);
         match rec {
-            Ok(rec) => {
-                if rec.is_some() {
-                    self.state
-                        .lock()
-                        .unwrap()
-                        .wait_anon(on_err)
-                        .expect("state could not be updated");
-                    return Ok(());
-                } else {
-                    Ok(())
-                }
-            }
+            Ok(rec) => Ok(()),
             Err(s) => Err(s),
         }
     }
@@ -127,30 +158,15 @@ impl LifeSpan for Caller {
         self.state.lock().unwrap().wait_shutdown();
         Ok(())
     }
-    fn wait_startup(&mut self) -> Result<(), LifeSpanError> {
+    fn wait_startup(&self) -> Result<(), LifeSpanError> {
         let rec = self.create_lifespan_handler(
             ASGIType::LifecycleStartup,
             "start",
             LifeSpanError::LifeSpanStartFailure,
         );
         match rec {
-            Ok(re) => {
-                if re.is_some() {
-                    self.state
-                        .lock()
-                        .unwrap()
-                        .wait_startup()
-                        .expect("state could not be updated");
-                }
-                Ok(())
-            }
-            Err(_e) => {
-                let re = self.wait_anon(LifeSpanError::LifeSpanStartFailure);
-                match re {
-                    Ok(_r) => return Ok(()),
-                    Err(e) => return Err(e),
-                }
-            }
+            Ok(_r) => Ok(()),
+            Err(e) => Err(e),
         }
     }
 }
@@ -166,6 +182,7 @@ fn process_async(
     py: Python,
     awaitable: PyObject,
 ) -> Result<(Option<PyObject>, Option<&PyException>), PyErr> {
+    info!("async call");
     // coroutine = fut.__await__()
     let res = awaitable.call(py, (), None);
 
@@ -180,20 +197,19 @@ fn process_async(
         Err(e) => panic!("{:#?}", e), // some condition we havent caught
     };
 
-    let mut py_result: Option<Result<PyObject, PyErr>> = None;
-    let mut n = 0;
+    let py_result: Option<Result<PyObject, PyErr>>;
     loop {
-        n += 1;
-        py_result = match await_result.call0(py) {
-            Ok(o) => Some(Ok(o)),
+        match await_result.call0(py) {
+            Ok(o) => {
+                info!("actual yield, might need to break early");
+                py_result = Some(Ok(o));
+                break;
+            }
             Err(p) => {
                 py_result = Some(Ok(p.value(py).to_object(py)));
                 break;
             }
         };
-
-        // #[cfg(debug_assertions)]
-        // info!("loop {}", n)
     }
 
     #[cfg(debug_assertions)]
@@ -253,7 +269,7 @@ where
     fn call(&self, py: Python, base: T) -> anyhow::Result<()> {
         // let kwargs = serialize(py, base);
         // let app =
-        let result = self.app.to_object(py).call(py, base, None);
+        let result = self.app.call(py, base, None);
         let awa = match result {
             Ok(succ) => succ,
             Err(e) => panic!("{:#?}", e),

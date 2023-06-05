@@ -10,7 +10,7 @@ use pyo3::Python;
 use tokio_rustls::rustls::ServerConfig;
 
 use crate::handlers::http::Bridge;
-
+use spvn_caller::service::lifespan::LifeSpan;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
@@ -103,6 +103,7 @@ async fn loop_passthru(
         let (stream, peer) = listener.accept().await?;
         let bi = bi.clone();
         let scheduler = scheduler.clone();
+
         let fut = async move {
             if let Err(err) = Http::new()
                 .serve_connection(
@@ -128,8 +129,14 @@ impl Spvn {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
         let listener = crate::startup::listen::spawn_so_reuse(addr).await;
-        let bi: Arc<spvn_caller::service::caller::SyncSafeCaller> = Arc::new(PySpawn::gen());
+        let reffed = PySpawn::gen();
 
+        let bi: Arc<spvn_caller::service::caller::SyncSafeCaller> = Arc::new(reffed);
+
+        let ref_ = bi.clone();
+        tokio::spawn(async move {
+            ref_.wait_startup();
+        });
         if !self.cfg.tls.is_none() {
             crate::startup::message::startup_message(pid, addr, true);
             let acceptor = TlsAcceptor::from(self.cfg.tls.as_ref().unwrap().clone());
