@@ -9,7 +9,7 @@ use colored::Colorize;
 use http::response::Builder;
 use pyo3::prelude::*;
 use spvn_serde::{body_receiver::PyAsyncBodyReceiver, coalesced, state::StateMap, ASGIResponse};
-use tracing::{debug, info};
+use tracing::{debug};
 
 use crate::handlers::tasks::Scheduler;
 

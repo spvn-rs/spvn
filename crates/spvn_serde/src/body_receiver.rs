@@ -2,7 +2,7 @@ use bytes::Bytes;
 use pyo3::prelude::*;
 use pyo3::prelude::{pyclass, pymethods};
 use pyo3::Python;
-use tracing::{debug, info};
+use tracing::{debug};
 
 use pyo3::pyclass::IterNextOutput;
 

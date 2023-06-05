@@ -5,7 +5,7 @@ use crossbeam::channel;
 
 use futures::Future;
 use tracing::debug;
-use tracing::info;
+
 
 use pyo3::exceptions::*;
 use pyo3::prelude::*;

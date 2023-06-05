@@ -18,7 +18,7 @@ use pyo3::{
     prelude::*,
     types::{PyBytes, PyDict},
 };
-use tracing::{info, log::warn};
+use tracing::{log::warn};
 
 /// Implementation per
 /// [specification](https://asgi.readthedocs.io/en/latest/specs/www.html)

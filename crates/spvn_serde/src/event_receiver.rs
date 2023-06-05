@@ -1,17 +1,13 @@
 use std::sync::atomic::AtomicUsize;
 
-use std::time::Duration;
-
 use pyo3::prelude::*;
 use pyo3::prelude::{pyclass, pymethods};
 use pyo3::Python;
+use tracing::debug;
 use tracing::log::warn;
-use tracing::{debug, info};
 
 use crate::asgi_scope::ASGIEvent;
 use colored::Colorize;
-use mio::{Events, Interest, Poll, Token};
-use mio_signals::{Signal, SignalSet, Signals};
 use pyo3::pyclass::IterNextOutput;
 
 #[pyclass]
@@ -27,30 +23,17 @@ impl PySyncEventReceiver {
     }
 }
 
-const LIFETIME: Token = Token(10);
-
 #[pyclass]
 pub struct PyASyncEventReceiver {
     val: ASGIEvent,
     calls: AtomicUsize,
-    signalled: bool,
-    poll: Poll,
-    signals: Signals,
 }
 
 impl PyASyncEventReceiver {
     pub fn new(val: ASGIEvent) -> Self {
-        let poll = Poll::new().unwrap();
-        let mut signals = Signals::new(SignalSet::all()).unwrap();
-        poll.registry()
-            .register(&mut signals, LIFETIME, Interest::READABLE)
-            .unwrap();
         Self {
             val,
             calls: AtomicUsize::new(0),
-            signalled: false,
-            poll: poll,
-            signals,
         }
     }
 }
@@ -74,49 +57,20 @@ impl PyASyncEventReceiver {
     ///    * a: yield the output <br/>
     ///    * b: raise timeout error <br/>
     ///    * c: poll again (\_\_next\_\_(self))
-    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python) -> IterNextOutput<PyObject, PyObject> {
+    fn __next__(slf: PyRefMut<'_, Self>, py: Python) -> IterNextOutput<PyObject, PyObject> {
         if slf.calls.load(std::sync::atomic::Ordering::Acquire) == 1 {
-            debug!("next 1");
-
-            // send lifecycle event to caller
             return IterNextOutput::Return(slf.val.clone().to_object(py));
         }
-        let mut events = Events::with_capacity(1);
-        slf.poll
-            .poll(&mut events, Some(Duration::from_nanos(100)))
-            .unwrap();
-
-        if events.is_empty() {
-            return IterNextOutput::Yield(slf.into_py(py));
-        };
-        {
-            for _event in events.iter() {
-                match slf.signals.receive().unwrap() {
-                    Some(Signal::Interrupt) => {
-                        warn!(
-                            "{}",
-                            "received SIGINT... sending lifecycle termination".red()
-                        );
-                    }
-                    Some(Signal::Terminate) => {
-                        warn!(
-                            "{}",
-                            "received SIGINT... sending lifecycle termination".red()
-                        );
-                    }
-                    Some(Signal::Quit) => {
-                        warn!(
-                            "{}",
-                            "received SIGINT... sending lifecycle termination".red()
-                        );
-                    }
-                    Some(sig) => {
-                        warn!("{:#?} unknown signal matched", sig)
-                    }
-                    None => return IterNextOutput::Yield(slf.into_py(py)),
-                }
+        match py.check_signals() {
+            Ok(_) => return IterNextOutput::Yield(slf.into_py(py)),
+            Err(e) => {
+                warn!(
+                    "{} {:#?}",
+                    "received signal... sending lifecycle termination".red(),
+                    e.traceback(py)
+                );
             }
-        }
+        };
         return IterNextOutput::Return(slf.val.clone().to_object(py));
     }
 }

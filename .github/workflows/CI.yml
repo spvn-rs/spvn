@@ -21,8 +21,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-
-env: 
+env:
   PACKAGE_NAME: spvn
 
 jobs:
@@ -30,12 +29,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64, x86, aarch64, armv7, s390x, ppc64le]
+        target:
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      - name: Set up Clang
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: latest
+          platform: x64
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -93,11 +99,12 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+          architecture: x64
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter
+          args: --release --out dist
       - name: Test Wheel
         if: ${{ !startsWith(matrix.platform.target, 'aarch64') }}
         shell: bash
@@ -124,7 +131,7 @@ jobs:
         if: ${{ !startsWith(matrix.platform.target, 'aarch64') }}
         shell: bash
         run: |
-          python -m pip install dist/${{ env.PACKAGE_NAME }}-*.whl --force-reinstall
+          pip install dist/${{ env.PACKAGE_NAME }}-*.tar.gz --force-reinstall
           spvn --help
           python -m spvn --help
       - name: Upload sdist

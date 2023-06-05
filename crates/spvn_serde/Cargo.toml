@@ -27,6 +27,3 @@ futures = {workspace = true}
 tokio = {workspace = true}
 crossbeam = {workspace = true}
 spvn_macros = {path = "../spvn_macros"}
-signal-hook = "0.3.15"
-mio-signals = "0.2.0"
-mio = "0.8"

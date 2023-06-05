@@ -3,7 +3,7 @@ use crossbeam::channel;
 use pyo3::{
     exceptions::PyRuntimeError, prelude::*, pyclass::IterNextOutput, types::PyDict, Python,
 };
-use tracing::{debug, info, log::warn};
+use tracing::{debug, log::warn};
 
 #[pyclass]
 pub struct Sender {
