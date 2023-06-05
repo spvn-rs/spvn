@@ -35,7 +35,7 @@ jobs:
           - i686-unknown-linux-gnu
     env:
       CC: "clang"
-      CFLAGS: "-O2 -fno-plt -flto=thin"
+      CFLAGS: "-O2 -fno-plt"
       LDFLAGS: "-O2 -flto=thin -fuse-ld=lld -Wl,--as-needed"
       RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=lld"
     steps:
@@ -44,6 +44,8 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
+      - name: Add rustup target
+        run: rustup target add ${{ matrix.target }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -84,12 +86,16 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+      - name: Add rustup target
+        run: rustup target add ${{ matrix.platform }}
+      - name: musl-tools
+        run: sudo apt install musl-tool
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         env:
           PYO3_CROSS_LIB_DIR: "/opt/python/cp39-cp39"
-          CFLAGS: "${{ matrix.target.cflags }}"
-          LDFLAGS: "${{ matrix.target.cflags }} -flto -Wl,--as-needed"
+          CFLAGS: "${{ matrix.platform.cflags }}"
+          LDFLAGS: "${{ matrix.platform.cflags }} -flto -Wl,--as-needed"
         with:
           target: ${{ matrix.platform.target }}
           manylinux: auto
@@ -118,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target:
+        platform:
           - target: aarch64-unknown-linux-musl
             arch: aarch64
             platform: linux/arm64
@@ -131,6 +137,8 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
+      - name: Add rustup target
+        run: rustup target add ${{ matrix.platform.target }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         env:
@@ -139,7 +147,7 @@ jobs:
           LDFLAGS: "-O2 -flto -Wl,--as-needed"
           RUSTFLAGS: "-C target-feature=-crt-static"
         with:
-          target: ${{ matrix.target }}
+          target: ${{ matrix.platform.target }}
           manylinux: musllinux_1_2
           args: --release --out dist -i python${{ env.PYTHON_VERSION }}
       - name: Test wheel
@@ -175,6 +183,8 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+      - name: Add rustup target
+        run: rustup target add ${{ matrix.platform.target }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         env: 
@@ -186,7 +196,6 @@ jobs:
           target: ${{ matrix.platform.target }}
           manylinux: musllinux_1_2
           args: --release --out dist -i python${{ env.PYTHON_VERSION }}
-          docker-options: ${{ matrix.platform.maturin_docker_options }}
       - uses: uraimo/run-on-arch-action@v2
         name: Test wheel
         with:
