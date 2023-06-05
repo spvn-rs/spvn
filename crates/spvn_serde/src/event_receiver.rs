@@ -3,10 +3,10 @@ use std::sync::atomic::{AtomicI64, AtomicUsize};
 use std::sync::Arc;
 use std::time::Duration;
 
-use log::info;
 use pyo3::prelude::*;
 use pyo3::prelude::{pyclass, pymethods};
 use pyo3::Python;
+use tracing::info;
 
 use crate::asgi_scope::ASGIEvent;
 use colored::Colorize;
@@ -82,7 +82,9 @@ impl PyASyncEventReceiver {
             return IterNextOutput::Return(slf.val.clone().to_object(py));
         }
         let mut events = Events::with_capacity(1);
-        slf.poll.poll(&mut events, Some(Duration::from_nanos(100))).unwrap();
+        slf.poll
+            .poll(&mut events, Some(Duration::from_nanos(100)))
+            .unwrap();
 
         if events.is_empty() {
             return IterNextOutput::Yield(slf.into_py(py));

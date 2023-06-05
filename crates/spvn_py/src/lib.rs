@@ -1,6 +1,5 @@
 use bytes;
 use pyo3::{prelude::*, types::PyBytes};
-use simple_logger::SimpleLogger;
 
 #[pyclass]
 struct AsgiResponse {
@@ -27,14 +26,12 @@ fn new_asgi_response(
 
 #[pymodule]
 fn spvn(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
-    SimpleLogger::new().env().init().unwrap();
-
     Python::with_gil(|py| {
         assert!(py.version_info() >= (3, 10));
     });
 
     m.add_function(wrap_pyfunction!(new_asgi_response, m)?)?;
-    // m.add_function(!(bind, m)?)?;
-    m.add_class::<AsgiResponse>();
+    m.add_class::<AsgiResponse>()?;
+
     Ok(())
 }

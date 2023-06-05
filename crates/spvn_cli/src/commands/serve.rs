@@ -6,9 +6,9 @@ use clap::{ArgAction, Args};
 use colored::Colorize;
 use core::clone::Clone;
 
-use log::info;
 use notify::event;
 use notify::Watcher;
+use tracing::{debug, info};
 
 use tokio::runtime::Builder;
 
@@ -36,10 +36,10 @@ pub struct ServeArgs {
     #[arg(short, long, value_name = "FILE")]
     pub target: String,
 
-    #[arg(conflicts_with = "cpu", long)]
+    #[arg(long, conflicts_with = "cpu")]
     pub n_threads: Option<usize>,
 
-    #[arg(conflicts_with = "n_threads", long)]
+    #[arg(long, conflicts_with = "n_threads",  action = ArgAction::SetTrue)]
     pub cpu: Option<bool>,
 
     // Bind a static port and reload on changes
@@ -67,6 +67,10 @@ pub struct ServeArgs {
     // proc dir (must have +x perm on UNIX)
     #[arg(long, env = "PROC_DIR")]
     pub proc_dir: Option<PathBuf>,
+
+    // whether to use lifespan support !!! experimental !!!
+    #[arg(short, long, action = ArgAction::SetTrue)]
+    pub lifespan: Option<bool>,
 }
 
 impl From<&ServeArgs> for BindArguments {
@@ -113,14 +117,15 @@ impl From<&ServeArgs> for HttpScheme {
 
 #[derive(Debug, Clone)]
 pub struct Arguments {
-    pub bind: BindArguments,
-    pub sec_scheme: SecScheme,
-    pub http_scheme: HttpScheme,
-    pub target: String,
+    bind: BindArguments,
+    sec_scheme: SecScheme,
+    http_scheme: HttpScheme,
+    target: String,
     watch: bool,
     ssl_cert_path: Option<PathBuf>,
     ssl_key_file: Option<PathBuf>,
     n_threads: usize,
+    lifespan: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -145,6 +150,7 @@ impl ServeArgs {
                     }
                     1
                 }),
+                lifespan: self.lifespan.unwrap_or(false),
             },
             Overrides {},
         )
@@ -181,6 +187,7 @@ impl Into<SpvnCfg> for Arguments {
         SpvnCfg {
             tls,
             n_threads: self.n_threads,
+            lifespan: self.lifespan,
         }
     }
 }
@@ -190,10 +197,7 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
     let arguments = arguments.to_owned();
     let overrides = overrides.to_owned();
 
-    #[cfg(debug_assertions)]
-    {
-        println!("{:#?} {:#?}", arguments, overrides);
-    }
+    debug!("{:#?} {:#?}", arguments, overrides);
 
     let tgt: &str = arguments.target.as_str();
     env::set_var("SPVN_SRV_TARGET", tgt);

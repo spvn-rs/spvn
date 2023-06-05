@@ -7,6 +7,6 @@ rust-version = { workspace = true }
 
 [dependencies]
 
-simple_logger = { workspace = true }
-log = { workspace = true  }
+tracing = { workspace = true }
+
 colored = { workspace = true }

@@ -1,8 +1,6 @@
 use crate::service::lifespan::{LifeSpan, LifeSpanError, LifeSpanState};
 use bytes::Bytes;
 use crossbeam_utils::thread;
-use log::debug;
-use log::{info, warn};
 use pyo3::exceptions::*;
 use pyo3::ffi::Py_None;
 use pyo3::intern;
@@ -22,6 +20,8 @@ use std::{
     task::Poll,
     time::Duration,
 };
+use tracing::debug;
+use tracing::{info, warn};
 
 use std::marker::PhantomData;
 
@@ -213,7 +213,7 @@ fn process_async(
     }
 
     #[cfg(debug_assertions)]
-    log::info!("py_result {:#?}", py_result,);
+    info!("py_result {:#?}", py_result,);
 
     let none: PyObject;
     unsafe {
@@ -293,7 +293,7 @@ where
             Err(_e) => Ok(awa),
         };
         #[cfg(debug_assertions)]
-        log::info!("post await {:#?}", hasawait);
+        info!("post await {:#?}", hasawait);
         let _obj = match hasawait {
             Ok(obj) => info!("{:#?}", obj),
             Err(obj) => return Err(obj.into()),

@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use crate::{asgi_scope::ASGIEvent, ASGIResponse, AsgiDict, InvalidationRationale};
 use crossbeam::channel;
-use log::info;
 use pyo3::{
     exceptions::PyRuntimeError, prelude::*, pyclass::IterNextOutput, types::PyDict, Python,
 };
+use tracing::info;
 
 #[pyclass]
 pub struct EventSender {

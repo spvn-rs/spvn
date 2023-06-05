@@ -13,12 +13,12 @@ use std::collections::HashMap;
 use asgi_scope::ASGIEvent;
 use bytes::Bytes;
 
-use log::info;
 use pyo3::{
     exceptions::*,
     prelude::*,
     types::{PyBytes, PyDict},
 };
+use tracing::info;
 
 /// Implementation per
 /// [specification](https://asgi.readthedocs.io/en/latest/specs/www.html)

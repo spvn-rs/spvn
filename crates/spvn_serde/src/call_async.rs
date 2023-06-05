@@ -4,7 +4,7 @@ use std::time::Instant;
 use crossbeam::channel;
 
 use futures::Future;
-use log::info;
+use tracing::info;
 
 use pyo3::exceptions::*;
 use pyo3::prelude::*;

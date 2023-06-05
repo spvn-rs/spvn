@@ -15,7 +15,8 @@ colored = { workspace = true }
 ahash = { workspace = true }
 hyper = { workspace = true, features = ["full"] }
 
-log = { workspace = true  }
+tracing = { workspace = true }
+
 bytes = { workspace = true }
 bytes-expand = { workspace = true }
 pyo3 = {workspace = true}

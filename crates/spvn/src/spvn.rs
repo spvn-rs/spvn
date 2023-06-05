@@ -1,7 +1,7 @@
 use crate::handlers::tasks::{Schedule, Scheduler};
 
 use hyper::server::conn::Http;
-use log::info;
+use tracing::info;
 
 use spvn_caller::PySpawn;
 
@@ -46,6 +46,9 @@ pub enum HttpScheme {
 pub struct SpvnCfg {
     pub tls: Option<Arc<ServerConfig>>,
     pub n_threads: usize,
+
+    #[cfg(feature = "lifespan")]
+    pub lifespan: bool,
 }
 
 pub struct Spvn {
@@ -132,11 +135,16 @@ impl Spvn {
         let reffed = PySpawn::gen();
 
         let bi: Arc<spvn_caller::service::caller::SyncSafeCaller> = Arc::new(reffed);
+        #[cfg(feature = "lifespan")]
+        {
+            if self.cfg.lifespan {
+                let ref_ = bi.clone();
+                tokio::spawn(async move {
+                    ref_.wait_startup();
+                });
+            }
+        }
 
-        let ref_ = bi.clone();
-        tokio::spawn(async move {
-            ref_.wait_startup();
-        });
         if !self.cfg.tls.is_none() {
             crate::startup::message::startup_message(pid, addr, true);
             let acceptor = TlsAcceptor::from(self.cfg.tls.as_ref().unwrap().clone());

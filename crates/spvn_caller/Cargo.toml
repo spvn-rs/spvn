@@ -29,12 +29,11 @@ syncpool = { version = "0.1.6" }
 async-trait = { workspace = true}
 tokio = { workspace = true }
 libc = { workspace = true }
-# , features = ["max_level_error"]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-simple_logger = { workspace = true }
-log = { workspace = true  }
+
 anyhow = { workspace = true }
+tracing = { workspace = true }
 colored = { workspace = true}
 
 

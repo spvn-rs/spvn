@@ -1,8 +1,8 @@
 use bytes::Bytes;
-use log::info;
 use pyo3::prelude::*;
 use pyo3::prelude::{pyclass, pymethods};
 use pyo3::Python;
+use tracing::info;
 
 use pyo3::pyclass::IterNextOutput;
 

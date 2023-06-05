@@ -9,8 +9,8 @@ rust-version = { workspace = true }
 crate-type = ["proc-macro"]
 
 [dependencies]
-simple_logger = { workspace = true }
-log = { workspace = true  }
+tracing = { workspace = true }
+
 colored = { workspace = true }
 syn = "2.0"
 quote = "1.0"

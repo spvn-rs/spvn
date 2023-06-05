@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use colored::Colorize;
-use log::info;
 use pyo3::Python;
 use std::time::Instant;
 use tokio::sync::{
     mpsc,
     mpsc::{Receiver, Sender},
 };
+use tracing::info;
 
 pub struct CallSoon {
     fu: fn(Python),

@@ -12,7 +12,7 @@ name = "spvn"
 doc = false
 
 [dependencies]
-spvn = { path = "../spvn" }
+spvn = { path = "../spvn", features = ["lifespan"] }
 spvn_cfg = { path = "../spvn_cfg" }
 spvn_caller = { path = "../spvn_caller"  }
 spvn_serde = { path = "../spvn_serde"  }
@@ -20,8 +20,8 @@ spvn_serde = { path = "../spvn_serde"  }
 
 num_cpus = "1.0"
 futures = { workspace = true }
-simple_logger = { workspace = true }
-log = { workspace = true  }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 anyhow = { workspace = true }
 tokio = { workspace = true, features = ["sync", "rt", "rt-multi-thread"]}

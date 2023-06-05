@@ -22,7 +22,8 @@ futures = { version = "0.3.28" }
 crossbeam = "0.8"
 deadpool = "0.9.5"
 socket2 = { version = "0.5.3" , features = ["all"]}
-
+tracing = "0.1"
+tracing-subscriber = "0.3"
 pyo3 = { version = "0.19.0" }
 colored = { version = "2.0.0" }
 serde = { version = "1.0", features = ["derive"] }
@@ -30,7 +31,6 @@ tokio = {version = "1.9", features = ["sync", "rt"]}
 async-trait = {version = "0.1.68"}
 simple_logger = "4.1.0"
 clap = { version = "4.3", features = ["derive"] }
-log = "0.4.17"
 anyhow = { version = "1.0.71" }
 axum = { version = "0.6.18"}
 axum-core = { version = "0.3.4"}

@@ -9,21 +9,5 @@ rust-version = { workspace = true }
 crate-type = ["rlib"]
 
 [dependencies]
-bytes = {workspace = true}
-spvn_serde = { path =  "../spvn_serde" }
-log = { workspace = true  }
-toml = { workspace = true }
-serde = { workspace = true }
-pyo3 = {workspace = true, features = []}
-
-
-axum = { workspace = true, features = [] }
-axum-core = { workspace = true }
-hyper = { workspace = true, features = ["full"] }
-tracing = "0.1"
-async-trait = { workspace = true }
-http = { workspace = true }
-once_cell = { workspace = true }
-tower = { version = "0.4", features = ["make"] }
 tokio-rustls = "0.24"
 rustls-pemfile = "1.0"

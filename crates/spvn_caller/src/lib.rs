@@ -1,11 +1,12 @@
 pub mod service;
+use colored::Colorize;
 use std::env;
 
 use crate::service::{imports::resolve_import, lifespan::LifeSpan};
 use async_trait::async_trait;
 use deadpool::managed;
-use log::info;
 use pyo3::prelude::*;
+use tracing::{debug, error, info};
 
 use service::caller::SyncSafeCaller;
 
@@ -45,7 +46,7 @@ impl PySpawn {
     pub fn gen() -> SyncSafeCaller {
         let target = env::var("SPVN_SRV_TARGET");
         #[cfg(debug_assertions)]
-        info!("TARGET {:#?}", target);
+        debug!("TARGET {:#?}", target);
 
         let tgt = match target {
             Ok(st) => st,
@@ -57,7 +58,12 @@ impl PySpawn {
         // let module = ;
         let mut caller = match module {
             Ok(asgi_app) => asgi_app,
-            Err(_) => panic!("panicked"),
+            Err(_) => {
+                panic!(
+                    "{}",
+                    "the caller wasnt loaded at runtime - panicking due to no backout".red()
+                )
+            }
         };
         SyncSafeCaller::new(caller)
     }
@@ -73,10 +79,10 @@ mod tests {
     use crate::{PySpawn, Spawn};
     // use cpython::PyDict;
     // use cpython::{py_fn, PyNone, PyResult, Python};
-    use log::info;
     use spvn_dev::init_test_hooks;
     use spvn_serde::asgi_scope::ASGIScope;
     use std::env;
+    use tracing::info;
 
     fn common_init_foo() {
         init_test_hooks();

@@ -7,9 +7,9 @@ use std::{
 use bytes::Bytes;
 use colored::Colorize;
 use http::response::Builder;
-use log::info;
 use pyo3::prelude::*;
 use spvn_serde::{body_receiver::PyAsyncBodyReceiver, coalesced, state::StateMap, ASGIResponse};
+use tracing::info;
 
 use crate::handlers::tasks::Scheduler;
 

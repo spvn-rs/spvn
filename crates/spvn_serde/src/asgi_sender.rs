@@ -1,9 +1,9 @@
 use crate::{ASGIResponse, AsgiDict, InvalidationRationale};
 use crossbeam::channel;
-use log::info;
 use pyo3::{
     exceptions::PyRuntimeError, prelude::*, pyclass::IterNextOutput, types::PyDict, Python,
 };
+use tracing::info;
 
 #[pyclass]
 pub struct Sender {

@@ -11,6 +11,10 @@ repository.workspace = true
 readme = "README.md"
 license = "MIT"
 
+
+[features]
+lifespan = []
+
 [lib]
 name = "spvn"
 crate-type = ["rlib"]
@@ -18,11 +22,13 @@ crate-type = ["rlib"]
 
 [dependencies]
 
+
 spvn_caller = {path = "../spvn_caller"}
 spvn_serde = {path = "../spvn_serde"}
 spvn_cfg = {path = "../spvn_cfg"}
 
-
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 ahash = { workspace = true, features = ["std"] }
 bytes = { workspace = true }
 deadpool = { workspace = true }
@@ -36,7 +42,6 @@ tokio-rustls = "0.24"
 tokio-util = "0.7.8"
 tokio-stream = { version = "0.1.14", features = ["net"] }
 async-trait = {workspace = true}
-log = { workspace = true }
 pyo3 = {workspace = true, features = []}
 
 http-body = { version = "0.4.5" }

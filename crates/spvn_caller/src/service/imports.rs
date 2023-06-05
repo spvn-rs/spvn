@@ -6,7 +6,7 @@ use core::result::Result::Ok;
 //     _detail::ffi::{PyObject as Py3FFIObj, PySys_GetObject},
 // };
 use libc::c_void;
-use log::{error, info};
+use tracing::{debug, error, info};
 
 use pyo3::ffi::{PyObject as Py3FFIObj, PySys_GetObject};
 use pyo3::prelude::*;
@@ -70,7 +70,7 @@ pub fn resolve_import(py: Python, import_str: &str) -> anyhow::Result<caller::Ca
 // ** gets module from result - panics if the result is an err to trace the error back
 fn pymod_from_result_module<'a>(py: Python, result: Result<&'a PyModule, PyErr>) -> &'a PyModule {
     #[cfg(debug_assertions)]
-    info!("matching module");
+    debug!("matching module");
     let modu = match result {
         Ok(pkg) => pkg,
         Err(err) => {
@@ -88,35 +88,39 @@ fn import<'a, 'b>(
     attr: &str,
 ) -> anyhow::Result<caller::Caller, ImportError> {
     #[cfg(debug_assertions)]
-    info!("source to load {:#?}", path);
+    debug!("source to load {:#?}", path);
 
     #[cfg(debug_assertions)]
-    info!("package to load {:}", pkg);
+    debug!("package to load {:}", pkg);
 
     let parent = path.parent().unwrap().as_os_str().to_str().unwrap();
     let is_venv = env::var("VIRTUAL_ENV");
     if is_venv.is_ok() {
         append_to_py_path(py, is_venv.clone().unwrap().as_str());
-        info!("{} - adding to py path", "venv found".green(),);
+        info!("{} - adding to py path", "venv found".green());
     } else {
-        info!("{}", "venv not found".yellow());
+        info!(
+            "{}",
+            "venv not found - use is strongly recommended to not conflict dependency origins"
+                .yellow()
+        );
     }
 
     let target = init_module(py, pkg, parent);
 
     #[cfg(debug_assertions)]
-    info!("loaded target from {:#?}", target.filename());
+    debug!("loaded target from {:#?}", target.filename());
 
     #[cfg(debug_assertions)]
-    info!("pymodule >> {:#?}", target.name(),);
+    debug!("pymodule >> {:#?}", target.name(),);
 
     #[cfg(debug_assertions)]
-    info!("using attribute >> {:#?}", attr);
+    debug!("using attribute >> {:#?}", attr);
 
     let app = target.getattr(attr);
 
     #[cfg(debug_assertions)]
-    info!("app loaded ok! {:#?}", app);
+    debug!("app loaded ok! {:#?}", app);
 
     match app {
         Ok(imported) => return anyhow::Result::Ok(caller::Caller::from(imported.to_object(py))),
@@ -130,10 +134,10 @@ fn append_to_py_path<'a>(py: Python<'a>, path: &str) {
         let name = CString::new("path").unwrap();
         let path = PySys_GetObject(name.as_ptr());
         #[cfg(debug_assertions)]
-        info!("loaded path {:#?}", path);
+        debug!("loaded path {:#?}", path);
         PyList_Append(path, py_pt);
         #[cfg(debug_assertions)]
-        info!("append to path complete");
+        debug!("append to path complete");
     }
 }
 
