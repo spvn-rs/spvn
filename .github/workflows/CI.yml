@@ -23,7 +23,7 @@ concurrency:
 
 env:
   PACKAGE_NAME: spvn
-  PYTHON_VERSION: "3.9" 
+  PYTHON_VERSION: "3.9"
   CARGO_INCREMENTAL: 0
   CARGO_NET_RETRY: 10
   CARGO_TERM_COLOR: always
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: 
+        target:
           - x86_64-unknown-linux-gnu
           - i686-unknown-linux-gnu
     steps:
@@ -42,15 +42,102 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install musl-gcc
-        run: sudo apt install musl-tools
-        shell: bash
+          architecture: x64
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist --find-interpreter
           manylinux: auto
+          args: --release --out dist
+      - name: Test wheel
+        if: ${{ startsWith(matrix.target, 'x86_64') }}
+        run: |
+          pip install dist/${{ env.PACKAGE_NAME }}-*.whl --force-reinstall
+          spvn --help
+          python -m spvn --help
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: dist
+
+  linux-cross:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - target: aarch64-unknown-linux-gnu
+            arch: aarch64
+          - target: armv7-unknown-linux-gnueabihf
+            arch: armv7
+          - target: s390x-unknown-linux-gnu
+            arch: s390x
+          - target: powerpc64le-unknown-linux-gnu
+            arch: ppc64le
+          - target: powerpc64-unknown-linux-gnu
+            arch: ppc64
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          manylinux: auto
+          args: --release --out dist
+      - uses: uraimo/run-on-arch-action@v2
+        if: matrix.platform.arch != 'ppc64'
+        name: Test wheel
+        with:
+          arch: ${{ matrix.platform.arch }}
+          distro: ubuntu20.04
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update
+            apt-get install -y --no-install-recommends python3 python3-pip
+            pip3 install -U pip
+          run: |
+            pip3 install ${{ env.PACKAGE_NAME }} --no-index --find-links dist/ --force-reinstall
+            spvn --help
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: dist
+
+  musllinux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-musl
+          - i686-unknown-linux-musl
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: musllinux_1_2
+          args: --release --out dist
+      - name: Test wheel
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        uses: addnab/docker-run-action@v3
+        with:
+          image: alpine:latest
+          options: -v ${{ github.workspace }}:/io -w /io
+          run: |
+            apk add py3-pip
+            pip3 install ${{ env.PACKAGE_NAME }} --no-index --find-links /io/dist/ --force-reinstall
+            spvn --help
+            python -m spvn --help
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
@@ -89,8 +176,7 @@ jobs:
           run: |
             pip3 install ${{ env.PACKAGE_NAME }} --no-index --find-links dist/ --force-reinstall
             spvn --help
-            python -m spvn --help
-      - name: "Upload wheels"
+      - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels
@@ -163,16 +249,16 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
-      - name: "Build wheels"
+      - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           args: --release --target universal2-apple-darwin --out dist
-      - name: "Test wheel"
+      - name: Test wheel
         run: |
           pip install dist/${{ env.PACKAGE_NAME }}-*universal2.whl --force-reinstall
           spvn --help
           python -m spvn --help
-      - name: "Upload wheels"
+      - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
           name: wheels
