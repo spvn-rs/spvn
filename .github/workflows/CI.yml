@@ -87,7 +87,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Add rustup target
-        run: rustup target add ${{ matrix.platform }}
+        run: rustup target add ${{ matrix.platform.target }}
       - name: musl-tools
         run: sudo apt install musl-tool
       - name: Build wheels
@@ -195,7 +195,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           manylinux: musllinux_1_2
-          args: --release --out dist -i python${{ env.PYTHON_VERSION }}
+          args: --release --out dist
       - uses: uraimo/run-on-arch-action@v2
         name: Test wheel
         with:
