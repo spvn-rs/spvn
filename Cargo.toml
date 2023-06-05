@@ -37,7 +37,7 @@ axum-core = { version = "0.3.4"}
 toml = { version = "0.7.4" }
 libc = { version = "0.2.144" }
 http = { version = "0.2.9" }
-once_cell = { version = "1.17.1" }
+once_cell = { version = "1.18.0" }
 hyper = { version = "0.14", features = ["full"] }
 tower = { version = "0.4", features = ["make"] }
 
