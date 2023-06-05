@@ -9,7 +9,7 @@ use colored::Colorize;
 use http::response::Builder;
 use log::info;
 use pyo3::prelude::*;
-use spvn_serde::{coalesced, receiver::PyAsyncBodyReceiver, state::StateMap, ASGIResponse};
+use spvn_serde::{body_receiver::PyAsyncBodyReceiver, coalesced, state::StateMap, ASGIResponse};
 
 use crate::handlers::tasks::Scheduler;
 
@@ -21,7 +21,7 @@ use hyper::{body::Body as IncomingBody, Request, Response};
 use spvn_caller::service::caller::Call;
 use spvn_caller::service::caller::SyncSafeCaller;
 use spvn_serde::asgi_scope::asgi_from_request;
-use spvn_serde::sender::Sender;
+use spvn_serde::asgi_sender::Sender;
 use spvn_serde::state::State;
 
 use std::marker::Send;

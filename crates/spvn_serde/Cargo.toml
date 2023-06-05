@@ -11,6 +11,7 @@ crate-type = ["rlib"]
 
 [dependencies]
 http = { workspace = true }
+colored = { workspace = true }
 ahash = { workspace = true }
 hyper = { workspace = true, features = ["full"] }
 
@@ -25,3 +26,6 @@ futures = {workspace = true}
 tokio = {workspace = true}
 crossbeam = {workspace = true}
 spvn_macros = {path = "../spvn_macros"}
+signal-hook = "0.3.15"
+mio-signals = "0.2.0"
+mio = "0.8"

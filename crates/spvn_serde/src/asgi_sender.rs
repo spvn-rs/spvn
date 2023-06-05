@@ -18,14 +18,12 @@ impl Sender {
             chan,
             sending: false,
             received: None,
-            // mtd: || IterAwait::new(Poll::Ready(true), rx),
         }
     }
 }
 
 #[pymethods]
 impl Sender {
-    // TODO: turn async
     fn __call__<'a>(
         mut slf: PyRefMut<'a, Self>,
         _py: Python<'a>,
@@ -55,7 +53,6 @@ impl Sender {
         };
         slf.received = Some(received);
         slf.sending = true;
-        // Ok((slf.mtd)().into_py(py))
         Ok(slf)
     }
 

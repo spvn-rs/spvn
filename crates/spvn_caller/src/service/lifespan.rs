@@ -1,4 +1,7 @@
-use std::sync::Mutex;
+use std::{collections::HashMap, sync::Mutex};
+
+use bytes::{BufMut, Bytes, BytesMut};
+use pyo3::{types::PyDict, Python};
 
 #[derive(Debug)]
 enum Life {
@@ -12,7 +15,7 @@ pub enum LifeSpanError {
     LifeSpanEndFailure,
 }
 pub trait LifeSpan {
-    fn wait_startup(&mut self) -> Result<(), LifeSpanError>;
+    fn wait_startup(&self) -> Result<(), LifeSpanError>;
     fn wait_shutdown(&mut self) -> Result<(), LifeSpanError>;
     fn wait_anon(&mut self, which: LifeSpanError) -> Result<(), LifeSpanError>;
 }
@@ -26,7 +29,7 @@ impl LifeSpan for LifeSpanState {
     fn wait_anon(&mut self, _which: LifeSpanError) -> Result<(), LifeSpanError> {
         Ok(())
     }
-    fn wait_startup(&mut self) -> Result<(), LifeSpanError> {
+    fn wait_startup(&self) -> Result<(), LifeSpanError> {
         let mut life = self.life.lock().unwrap();
         *life = Life::LifeStarted;
         Ok(())

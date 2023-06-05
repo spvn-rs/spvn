@@ -40,3 +40,4 @@ colored = { workspace = true}
 
 
 bytes = {workspace = true}
+crossbeam-utils = "0.8.15"

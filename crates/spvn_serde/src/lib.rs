@@ -1,11 +1,16 @@
 pub mod asgi_scope;
+pub mod asgi_sender;
+pub mod body_receiver;
 pub mod call_async;
 pub mod coalesced;
+pub mod event_receiver;
+pub mod event_sender;
 pub mod implementation;
-pub mod receiver;
-pub mod sender;
 pub mod state;
 
+use std::collections::HashMap;
+
+use asgi_scope::ASGIEvent;
 use bytes::Bytes;
 
 use log::info;
@@ -46,15 +51,14 @@ impl ASGIType {
     pub fn from(value: String) -> Result<Self, ()> {
         let s = value.to_lowercase();
         let ma = match s.as_str() {
-            // <2.0
-            "lifespan.startup.complete" => ASGIType::LifecycleStartupSuccess,
-            "lifespan.shutdown.complete" => ASGIType::LifecycleShutdownSuccess,
             // 2.2
-            "lifespan.startup.success" => ASGIType::LifecycleStartupSuccess,
-            "lifespan.startup.failure" => ASGIType::LifecycleStartupFailure,
+            "lifespan" => ASGIType::Lifespan,
 
-            "lifespan.shutdown.success" => ASGIType::LifecycleShutdownSuccess,
-            "lifespan.shutdown.failure" => ASGIType::LifecycleShutdownFailure,
+            "lifespan.startup.complete" => ASGIType::LifecycleStartupSuccess,
+            "lifespan.startup.failed" => ASGIType::LifecycleStartupFailure,
+
+            "lifespan.shutdown.complete" => ASGIType::LifecycleShutdownSuccess,
+            "lifespan.shutdown.failed" => ASGIType::LifecycleShutdownFailure,
 
             "http.response.start" => ASGIType::HTTPResponseStart,
             "http.response.body" => ASGIType::HTTPResponseBody,
@@ -123,13 +127,8 @@ pub struct ASGIResponse {
     trailers: Option<bool>,
 }
 
-#[derive(Debug)]
-struct AsgiDict<'a>(&'a PyDict);
-
-impl<'a> TryInto<ASGIResponse> for AsgiDict<'a> {
-    type Error = InvalidationRationale;
-
-    fn try_into(self) -> Result<ASGIResponse, Self::Error> {
+impl<'a> AsgiDict<'a> {
+    fn extract_type(&self) -> Result<ASGIType, InvalidationRationale> {
         let _type = self.0.get_item("type");
         if _type.is_none() {
             #[cfg(debug_assertions)]
@@ -144,6 +143,76 @@ impl<'a> TryInto<ASGIResponse> for AsgiDict<'a> {
         let _type: String = _type.unwrap().extract().expect("type must be provided");
 
         let _type = match ASGIType::from(_type) {
+            Ok(typ) => typ,
+            Err(_) => {
+                #[cfg(debug_assertions)]
+                {
+                    info!("invalid asgi type provided {:#?}", self)
+                }
+                return Err(InvalidationRationale {
+                    message: String::from("invalid asgi type provided"),
+                });
+            }
+        };
+        Ok(_type)
+    }
+}
+
+#[derive(Debug)]
+struct AsgiDict<'a>(&'a PyDict);
+
+impl<'a> TryInto<ASGIEvent> for AsgiDict<'a> {
+    type Error = InvalidationRationale;
+
+    fn try_into(self) -> Result<ASGIEvent, Self::Error> {
+        let _type = match self.extract_type() {
+            Ok(typ) => typ,
+            Err(_) => {
+                #[cfg(debug_assertions)]
+                {
+                    info!("invalid asgi type provided {:#?}", self)
+                }
+                return Err(InvalidationRationale {
+                    message: String::from("invalid asgi type provided"),
+                });
+            }
+        };
+        let mut message: Option<String> = None;
+        let _msg = self.0.get_item("message");
+        if _msg.is_some() {
+            let st: Result<String, PyErr> = _msg.unwrap().extract();
+            match st {
+                Ok(msg) => {
+                    message = Some(msg);
+                }
+                Err(_) => (),
+            };
+        }
+        let mut state: Option<HashMap<String, String>> = None;
+
+        // let _state = self.0.get_item("state");
+        // if _state.is_some() {
+        //     let st: Result<HashMap<String, String>, PyErr> = _msg.unwrap().extract();
+        //     match st {
+        //         Ok(msg) => {
+        //             state = Some(msg);
+        //         }
+        //         Err(_) => (),
+        //     };
+        // }
+
+        Ok(ASGIEvent {
+            _type,
+            message,
+            state,
+        })
+    }
+}
+impl<'a> TryInto<ASGIResponse> for AsgiDict<'a> {
+    type Error = InvalidationRationale;
+
+    fn try_into(self) -> Result<ASGIResponse, Self::Error> {
+        let _type = match self.extract_type() {
             Ok(typ) => typ,
             Err(_) => {
                 #[cfg(debug_assertions)]

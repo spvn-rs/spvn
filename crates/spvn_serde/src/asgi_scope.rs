@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::implementation::set_dict_item_feedback;
 use crate::implementation::{ASGIVersions, ASGI_IMPLEMENTATION};
 use crate::ASGIType;
@@ -6,19 +8,24 @@ use http::{uri::Scheme, Uri, Version};
 use hyper::{body::Body as IncomingBody, Request};
 
 use pyo3::types::PyDict;
-use pyo3::Python;
 use pyo3::ToPyObject;
+use pyo3::{PyAny, Python};
 
 /// This is a special struct we only use to send lifecycle events
-/// to the application
+/// to / from the application
+#[derive(Clone, Debug)]
 pub struct ASGIEvent {
-    _type: String,
+    pub _type: ASGIType,
+    pub state: Option<HashMap<String, String>>,
+    pub message: Option<String>,
 }
 
 impl From<ASGIType> for ASGIEvent {
     fn from(value: ASGIType) -> Self {
         Self {
             _type: value.into(),
+            state: Some(HashMap::default()),
+            message: None,
         }
     }
 }
@@ -26,8 +33,9 @@ impl From<ASGIType> for ASGIEvent {
 impl ASGIEvent {
     pub fn to_object(self, py: Python<'_>) -> pyo3::PyObject {
         let dict = PyDict::new(py);
-        set_dict_item_feedback(py, &dict, "type", self._type);
-
+        let _type: &str = self._type.into();
+        set_dict_item_feedback(py, &dict, "type", _type);
+        set_dict_item_feedback(py, &dict, "state", self.state);
         dict.to_object(py)
     }
 }

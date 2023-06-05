@@ -59,11 +59,6 @@ impl PySpawn {
             Ok(asgi_app) => asgi_app,
             Err(_) => panic!("panicked"),
         };
-
-        let startup = (caller).wait_startup();
-
-        println!("lifespan startup complete {:#?}", startup);
-        // caller.
         SyncSafeCaller::new(caller)
     }
 }
