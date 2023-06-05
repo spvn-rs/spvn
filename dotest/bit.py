@@ -1,6 +1,7 @@
 import asyncio
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+
 ml_models = {}
 
 
@@ -25,20 +26,24 @@ async def run_something():
 def fake_answer_to_everything_ml_model(x: float):
     return x * 42
 
+
 @app.get("/download")
 async def run_something():
     return open("./dotest/canada.json", 'rb').read()
+
 
 @app.get("/state")
 async def run_something():
     return {"resp": ml_models.get("answer_to_everything", "actual nothing")}
 
 
-
 async def send(a):
     pass
+
+
 async def receive(**a):
     pass
+
 
 if __name__ == "__main__":
     asyncio.run(app({"type": "lifespan"}, receive, send))

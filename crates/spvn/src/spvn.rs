@@ -48,13 +48,14 @@ pub enum HttpScheme {
 #[derive(Clone)]
 pub struct SpvnCfg {
     pub tls: Option<Arc<ServerConfig>>,
-    pub n_threads: usize,
     pub bind: BindArguments,
-
     pub quiet: bool,
 
     #[cfg(feature = "lifespan")]
     pub lifespan: bool,
+
+    #[cfg(not(windows))]
+    pub n_threads: usize,
 }
 
 pub struct Spvn {
@@ -205,6 +206,7 @@ pub mod tests {
     use crate::spvn::{Spvn, SpvnCfg};
 
     #[cfg(feature = "lifespan")]
+    #[cfg(not(windows))]
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_integration_no_ssl() {
         spvn_dev::init_test_hooks();

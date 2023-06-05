@@ -1,24 +1,26 @@
-from typing import TypedDict
-
-__err__ = "should not be called directly, instead you may use it to provide type annotations to your project"
+from typing import Awaitable, Callable, List, Optional, Tuple, TypedDict
 
 
-class Send(TypedDict):
+class SendDict(TypedDict):
     """Send is a typed dict representing the fields exposed to clients
-    for sending responses back to spvn. All fields MUST be included, specifying
-    None value when applicable.
+    for sending responses back to spvn.
 
     Args:
         type: str -> "http.response.start"
-        headers: list[tuple[str, bytes]] -> [("x-content", b'abc-value')]
-        body: bytes | None -> b"my response"
+        status: Optional[int] -> `200`
+        message: Optional[str] -> `None` (lifecycle events only)
+        headers: Optional[List[Tuple[bytes, bytes]]] -> `[(b'Some-Header', b'value')]`
+        body: Optional[bytes] -> `b'Hello World'`
+        more_body: Optional[bool] -> `False`
+        trailers: Optional[bool] -> `False`
     """
 
     type: str
-    headers: list[tuple[str, bytes]]
-    body: bytes | None
+    status: Optional[int]
+    message: Optional[str]
+    headers: Optional[List[Tuple[bytes, bytes]]]
+    body: Optional[bytes]
+    more_body: Optional[bool]
+    trailers: Optional[bool]
 
-
-class Sender:
-    def __call__(self, obj: Send) -> None:
-        raise NotImplementedError(__err__)
+Sender = Callable[[SendDict], Awaitable[None]]
