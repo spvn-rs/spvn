@@ -25,7 +25,9 @@ async def run_something():
 def fake_answer_to_everything_ml_model(x: float):
     return x * 42
 
-
+@app.get("/download")
+async def run_something():
+    return open("./dotest/canada.json", 'rb').read()
 
 @app.get("/state")
 async def run_something():

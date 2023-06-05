@@ -9,6 +9,8 @@ use spvn_serde::{
     asgi_scope::ASGIEvent, event_receiver::PyASyncEventReceiver, event_sender::EventSender,
     ASGIType,
 };
+use std::alloc::Layout;
+use std::alloc::alloc;
 use std::{
     cmp::max,
     future::Future,
@@ -46,6 +48,11 @@ pub struct Caller {
     pub app: Box<PyObject>,
 }
 
+
+unsafe impl Send for Caller {}
+unsafe impl Sync for Caller {}
+
+
 impl From<Py<PyAny>> for Caller {
     fn from(app: Py<PyAny>) -> Self {
         Caller {
@@ -55,17 +62,10 @@ impl From<Py<PyAny>> for Caller {
     }
 }
 
-// pub type SerialToPyKwargs = fn<'a>(Python, &PyDict) -> &'a PyDict;
-
-// static pt: SerialToPyKwargs = || {
-
-// }
-// pub fn passthru<'a>(py: Python<'a>, dict: &'a PyDict) -> &'a PyDict {
-//     dict
-// }
 
 impl Caller {
-    fn run_until_complete(&self) {}
+    // fn run_until_complete(&self) {}
+
     /// Expected events:
     /// 1. Send `{ type: lifespan ... }` to app
     /// 2. App requests 1st receive, which is for passing some blocking awaitable on startup
@@ -371,47 +371,3 @@ where
 //         Self { state }
 //     }
 // }
-
-#[derive(Clone, Copy)]
-pub struct SyncSafeCaller {
-    ptr: std::ptr::NonNull<Caller>,
-    _data: PhantomData<Caller>,
-}
-
-impl SyncSafeCaller {
-    pub fn new(caller: Caller) -> Self {
-        let mut memptr: *mut Caller = ptr::null_mut();
-        unsafe {
-            let ret = libc::posix_memalign(
-                (&mut memptr as *mut *mut Caller).cast(),
-                max(align_of::<Caller>(), size_of::<usize>()),
-                size_of::<Caller>(),
-            );
-            assert_eq!(ret, 0, "Failed to allocate or invalid alignment");
-        };
-        let ptr = { ptr::NonNull::new(memptr).expect("posix_memalign should have returned 0") };
-        unsafe {
-            ptr.as_ptr().write(caller);
-        }
-        Self {
-            ptr,
-            _data: PhantomData::default(),
-        }
-    }
-}
-
-impl Deref for SyncSafeCaller {
-    type Target = Caller;
-    fn deref(&self) -> &Self::Target {
-        unsafe { self.ptr.as_ref() }
-    }
-}
-
-impl DerefMut for SyncSafeCaller {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { self.ptr.as_mut() }
-    }
-}
-
-unsafe impl Send for SyncSafeCaller {}
-unsafe impl Sync for SyncSafeCaller {}

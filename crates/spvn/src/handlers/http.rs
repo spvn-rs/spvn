@@ -9,7 +9,7 @@ use colored::Colorize;
 use http::response::Builder;
 use pyo3::prelude::*;
 use spvn_serde::{body_receiver::PyAsyncBodyReceiver, coalesced, state::StateMap, ASGIResponse};
-use tracing::{debug};
+use tracing::debug;
 
 use crate::handlers::tasks::Scheduler;
 
@@ -18,8 +18,7 @@ use futures::Future;
 use http_body::Full;
 use hyper::body;
 use hyper::{body::Body as IncomingBody, Request, Response};
-use spvn_caller::service::caller::Call;
-use spvn_caller::service::caller::SyncSafeCaller;
+use spvn_caller::service::caller::{Call, Caller};
 use spvn_serde::asgi_scope::asgi_from_request;
 use spvn_serde::asgi_sender::Sender;
 use spvn_serde::state::State;
@@ -28,12 +27,11 @@ use std::marker::Send;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use tower_service::Service;
-type Caller = Arc<Mutex<SyncSafeCaller>>;
 type Ra = Result<http::Response<http_body::Full<bytes::Bytes>>, hyper::Error>;
 
 pub struct Bridge {
     // state: State,
-    caller: Arc<SyncSafeCaller>,
+    caller: Arc<Caller>,
     // ptr only
     scheduler: Arc<Scheduler>,
     cancel: Box<CancellationToken>,
@@ -43,7 +41,7 @@ pub struct Bridge {
 
 impl Bridge {
     pub fn new(
-        caller: Arc<SyncSafeCaller>,
+        caller: Arc<Caller>,
         scheduler: Arc<Scheduler>,
         peer: SocketAddr,
         server: SocketAddr,
@@ -51,7 +49,6 @@ impl Bridge {
         let token = CancellationToken::new();
         Self {
             caller: caller,
-            // state: Arc::new(Mutex::new(HashMap::new())),
             scheduler: scheduler.clone(),
             cancel: Box::new(token),
             peer,
@@ -107,7 +104,7 @@ impl Service<Request<IncomingBody>> for Bridge {
     fn call(&mut self, req: Request<IncomingBody>) -> Self::Future {
         async fn mk_response(
             req: Request<IncomingBody>,
-            caller: Arc<SyncSafeCaller>,
+            caller: Arc<Caller>,
             state: State,
             server: SocketAddr,
             peer: SocketAddr,

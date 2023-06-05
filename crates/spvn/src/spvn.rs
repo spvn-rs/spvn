@@ -6,7 +6,7 @@ use crate::handlers::{
 use hyper::server::conn::Http;
 use tracing::debug;
 
-use spvn_caller::PySpawn;
+use spvn_caller::{PySpawn, service::caller::Caller};
 
 use futures::executor;
 use pyo3::Python;
@@ -77,7 +77,7 @@ impl Into<Spvn> for SpvnCfg {
 async fn loop_tls(
     listener: TcpListener,
     acceptor: TlsAcceptor,
-    bi: Arc<spvn_caller::service::caller::SyncSafeCaller>,
+    bi: Arc<Caller>,
     scheduler: Arc<Scheduler>,
     server: SocketAddr,
     quiet: bool,
@@ -118,7 +118,7 @@ async fn loop_tls(
 
 async fn loop_passthru(
     listener: TcpListener,
-    bi: Arc<spvn_caller::service::caller::SyncSafeCaller>,
+    bi: Arc<Caller>,
     scheduler: Arc<Scheduler>,
     server: SocketAddr,
     quiet: bool,
@@ -164,7 +164,7 @@ impl Spvn {
         let listener = crate::startup::listen::spawn_so_reuse(addr).await;
         let reffed = PySpawn::gen();
 
-        let bi: Arc<spvn_caller::service::caller::SyncSafeCaller> = Arc::new(reffed);
+        let bi: Arc<Caller> = Arc::new(reffed);
         #[cfg(feature = "lifespan")]
         {
             if self.cfg.lifespan {

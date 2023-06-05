@@ -111,3 +111,9 @@ _spvn @ 5000 reqs/s_
 
 ![spvn-10000](./spvn-10000.png)
 _spvn @ 10000 reqs/s (dropped requests but continued service <130ms P95)_
+
+
+
+### POST Test
+Source: https://github.com/serde-rs/json-benchmark/blob/master/data/canada.json
+
