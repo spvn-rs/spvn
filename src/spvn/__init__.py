@@ -1,1 +1,1 @@
-from .types import Send, Sender
+from .types import SendDict, Sender
