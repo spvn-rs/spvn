@@ -19,7 +19,7 @@ permissions:
 
 env:
   PACKAGE_NAME: spvn
-  PYTHON_VERSION: "3.9"
+  PYTHON_VERSION: "3.10"
   CARGO_INCREMENTAL: 0
   CARGO_NET_RETRY: 10
   CARGO_TERM_COLOR: always
@@ -51,7 +51,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: auto
-          args: --release --out dist --compatibility manylinux_2_17 -i python${{ env.PYTHON_VERSION }}
+          args: --release --out dist --find-interpreter
       - name: Test wheel
         if: ${{ startsWith(matrix.target, 'x86_64') }}
         run: |
@@ -90,17 +90,16 @@ jobs:
       - name: Add rustup target
         run: rustup target add ${{ matrix.platform.target }}
       - name: musl-tools
-        run: sudo apt install musl-tool
+        run: sudo apt install musl-tools
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         env:
-          PYO3_CROSS_LIB_DIR: "/opt/python/cp39-cp39"
           CFLAGS: "${{ matrix.platform.cflags }}"
           LDFLAGS: "${{ matrix.platform.cflags }} -flto -Wl,--as-needed"
         with:
           target: ${{ matrix.platform.target }}
           manylinux: auto
-          args: --release --out dist
+          args: --release --out dist --find-interpreter
       - uses: uraimo/run-on-arch-action@v2
         if: matrix.platform.arch != 'ppc64'
         name: Test wheel
@@ -141,6 +140,8 @@ jobs:
           architecture: x64
       - name: Add rustup target
         run: rustup target add ${{ matrix.platform.target }}
+      - name: musl-tools
+        run: sudo apt install musl-tools
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         env:
@@ -148,10 +149,11 @@ jobs:
           CFLAGS: "-O2 -fno-plt"
           LDFLAGS: "-O2 -flto -Wl,--as-needed"
           RUSTFLAGS: "-C target-feature=-crt-static"
+          PYO3_NO_PYTHON: 1
         with:
           target: ${{ matrix.platform.target }}
-          manylinux: musllinux_1_2
-          args: --release --out dist -i python${{ env.PYTHON_VERSION }}
+          manylinux: auto
+          args: --release --out dist --find-interpreter
       - name: Test wheel
         if: matrix.target == 'x86_64-unknown-linux-musl'
         uses: addnab/docker-run-action@v3
