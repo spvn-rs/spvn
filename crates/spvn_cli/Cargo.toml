@@ -27,4 +27,4 @@ tokio = { workspace = true, features = ["sync", "rt", "rt-multi-thread"]}
 colored = { workspace = true}
 notify = { version = "6.0.0" }
 tokio-rustls = "0.24"
-pyo3 = {workspace = true, features = []}
+pyo3 = {workspace = true, features = ["abi3"]}

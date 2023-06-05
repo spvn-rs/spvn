@@ -15,7 +15,7 @@ license = "MIT"
 
 [dependencies]
 
-pyo3 = {workspace = true, features = []}
+pyo3 = {workspace = true, features = ["abi3"]}
 futures = {workspace = true, features = []}
 crossbeam = {workspace = true}
 
