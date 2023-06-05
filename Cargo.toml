@@ -3,8 +3,7 @@ members = ["crates/*"]
 
 
 [workspace.package]
-
-version = "0.1.1"
+version = "0.1.1-beta.0"
 edition = "2021"
 rust-version = "1.69.0"
 authors = ["Joshua A. <joshua.auchincloss@proton.me>"]

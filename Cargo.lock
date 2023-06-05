@@ -1110,7 +1110,7 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spvn"
-version = "0.1.1"
+version = "0.1.1-beta.0"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1125,9 +1125,10 @@ dependencies = [
  "http-body",
  "hyper",
  "pyo3",
+ "rustls-pemfile",
  "socket2 0.5.3",
  "spvn_caller",
- "spvn_cfg",
+ "spvn_dev",
  "spvn_serde",
  "tokio",
  "tokio-rustls",
@@ -1143,7 +1144,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_caller"
-version = "0.1.1"
+version = "0.1.1-beta.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1157,7 +1158,6 @@ dependencies = [
  "pyo3",
  "serde",
  "serde_json",
- "spvn_cfg",
  "spvn_dev",
  "spvn_serde",
  "syncpool",
@@ -1166,16 +1166,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "spvn_cfg"
-version = "0.1.1"
-dependencies = [
- "rustls-pemfile",
- "tokio-rustls",
-]
-
-[[package]]
 name = "spvn_cli"
-version = "0.1.1"
+version = "0.1.1-beta.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1186,7 +1178,6 @@ dependencies = [
  "pyo3",
  "spvn",
  "spvn_caller",
- "spvn_cfg",
  "spvn_serde",
  "tokio",
  "tokio-rustls",
@@ -1196,7 +1187,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_dev"
-version = "0.1.1"
+version = "0.1.1-beta.0"
 dependencies = [
  "colored",
  "tracing",
@@ -1204,7 +1195,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_macros"
-version = "0.1.1"
+version = "0.1.1-beta.0"
 dependencies = [
  "colored",
  "crossbeam",
@@ -1219,7 +1210,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_serde"
-version = "0.1.1"
+version = "0.1.1-beta.0"
 dependencies = [
  "ahash",
  "bytes",

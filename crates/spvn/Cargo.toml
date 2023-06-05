@@ -11,7 +11,6 @@ repository.workspace = true
 readme = "README.md"
 license = "MIT"
 
-
 [features]
 lifespan = []
 
@@ -19,13 +18,10 @@ lifespan = []
 name = "spvn"
 crate-type = ["rlib"]
 
-
 [dependencies]
-
-
+spvn_dev = {path = "../spvn_dev"}
 spvn_caller = {path = "../spvn_caller"}
 spvn_serde = {path = "../spvn_serde"}
-spvn_cfg = {path = "../spvn_cfg"}
 
 tracing = { workspace = true }
 tracing-core = { workspace = true }
@@ -37,7 +33,7 @@ bytes-expand = { workspace = true }
 colored = { workspace = true }
 crossbeam = {workspace = true}
 
-
+rustls-pemfile = "1.0"
 anyhow = {workspace = true}
 tokio-rustls = "0.24"
 tokio-util = "0.7.8"
@@ -46,7 +42,7 @@ async-trait = {workspace = true}
 pyo3 = {workspace = true, features = []}
 
 http-body = { version = "0.4.5" }
-tokio = { workspace = true, features = ["sync", "macros"] }
+tokio = { workspace = true, features = ["sync", "macros", "rt-multi-thread"] }
 hyper = { workspace = true, features = ["full"] }
 http = { workspace = true }
 futures = { workspace = true }

@@ -21,7 +21,6 @@ crossbeam = {workspace = true}
 
 deadpool = { workspace = true }
 
-spvn_cfg = { path = "../spvn_cfg" }
 spvn_serde = { path = "../spvn_serde" }
 spvn_dev = { path = "../spvn_dev" }
 

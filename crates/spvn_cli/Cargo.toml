@@ -13,7 +13,6 @@ doc = false
 
 [dependencies]
 spvn = { path = "../spvn", features = ["lifespan"] }
-spvn_cfg = { path = "../spvn_cfg" }
 spvn_caller = { path = "../spvn_caller"  }
 spvn_serde = { path = "../spvn_serde"  }
 

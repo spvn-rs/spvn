@@ -26,7 +26,7 @@ pub struct ServeArgs {
     pub bind: Option<SocketAddr>,
 
     // The target "module.file:attr" to inject wrappings into
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(value_name = "py import")]
     pub target: String,
 
     #[arg(long, conflicts_with = "cpu")]
@@ -156,7 +156,7 @@ impl Into<SpvnCfg> for Arguments {
     fn into(self) -> SpvnCfg {
         let mut tls: Option<Arc<TlsConfig>> = None;
         let when = || {
-            Some(spvn_cfg::tls_config(
+            Some(spvn::startup::tls::tls_config(
                 self.ssl_key_file.as_ref().expect("no ssl keyfile given"),
                 self.ssl_cert_path.as_ref().expect("no ssl certfile given"),
             ))

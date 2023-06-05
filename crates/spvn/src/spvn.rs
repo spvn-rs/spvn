@@ -199,3 +199,29 @@ impl Spvn {
         executor::block_on(self.scheduler.schedule(fu));
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use crate::spvn::{Spvn, SpvnCfg};
+
+    #[cfg(feature = "lifespan")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_integration_no_ssl() {
+        spvn_dev::init_test_hooks();
+        std::env::set_var("SPVN_SRV_TARGET", "dotest.bit:app");
+        let cfg = SpvnCfg {
+            tls: None,
+            n_threads: 1,
+            bind: crate::spvn::BindArguments {
+                bind: ([127, 0, 0, 1], 1234).into(),
+                mtd: crate::spvn::BindMethods::BindTcp,
+            },
+            quiet: false,
+            lifespan: false,
+        };
+        let mut spvn: Spvn = cfg.into();
+        let j1 = tokio::spawn(async move { spvn.service(1).await });
+
+        j1.abort();
+    }
+}

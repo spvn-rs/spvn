@@ -34,10 +34,8 @@ async def run_something():
 
 
 async def send(a):
-    print('send', a)
-
+    pass
 async def receive(**a):
-    print('recv', a)
     pass
 
 if __name__ == "__main__":
