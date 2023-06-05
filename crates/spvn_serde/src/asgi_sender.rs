@@ -3,7 +3,7 @@ use crossbeam::channel;
 use pyo3::{
     exceptions::PyRuntimeError, prelude::*, pyclass::IterNextOutput, types::PyDict, Python,
 };
-use tracing::info;
+use tracing::{debug, info, log::warn};
 
 #[pyclass]
 pub struct Sender {
@@ -41,7 +41,7 @@ impl Sender {
             Err(e) => {
                 #[cfg(debug_assertions)]
                 {
-                    info!("invalid {:#?}", e.message)
+                    warn!("invalid {:#?}", e.message)
                 };
                 return Err(e);
             }
@@ -49,7 +49,7 @@ impl Sender {
 
         #[cfg(debug_assertions)]
         {
-            info!("python sent {:#?}", received)
+            debug!("python sent {:#?}", received)
         };
         slf.received = Some(received);
         slf.sending = true;
@@ -63,7 +63,7 @@ impl Sender {
             match res {
                 Ok(_) => Ok(slf),
                 Err(e) => {
-                    info!("{:#?}", e);
+                    debug!("{:#?}", e);
                     Err(PyRuntimeError::new_err("an error occured sending the data"))
                 }
             }
@@ -76,7 +76,7 @@ impl Sender {
         mut slf: PyRefMut<'a, Self>,
         py: Python,
     ) -> IterNextOutput<PyRefMut<'a, Self>, PyObject> {
-        info!("next");
+        debug!("next");
         slf.sending = false;
         slf.received = None;
         pyo3::pyclass::IterNextOutput::Return(py.None())

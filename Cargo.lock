@@ -1137,6 +1137,7 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
+ "tracing-core",
  "tracing-subscriber",
 ]
 
@@ -1212,21 +1213,6 @@ dependencies = [
  "pyo3",
  "quote",
  "syn 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "spvn_py"
-version = "0.1.1"
-dependencies = [
- "anyhow",
- "async-trait",
- "bytes",
- "pyo3",
- "serde",
- "serde_json",
- "spvn_cfg",
  "tokio",
  "tracing",
 ]

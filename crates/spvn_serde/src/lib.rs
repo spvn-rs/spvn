@@ -18,7 +18,7 @@ use pyo3::{
     prelude::*,
     types::{PyBytes, PyDict},
 };
-use tracing::info;
+use tracing::{info, log::warn};
 
 /// Implementation per
 /// [specification](https://asgi.readthedocs.io/en/latest/specs/www.html)
@@ -133,7 +133,7 @@ impl<'a> AsgiDict<'a> {
         if _type.is_none() {
             #[cfg(debug_assertions)]
             {
-                info!("type provided is none")
+                warn!("type provided is none")
             }
             return Err(InvalidationRationale {
                 message: String::from(r#"missing "type" field"#),
@@ -147,7 +147,7 @@ impl<'a> AsgiDict<'a> {
             Err(_) => {
                 #[cfg(debug_assertions)]
                 {
-                    info!("invalid asgi type provided {:#?}", self)
+                    warn!("invalid asgi type provided {:#?}", self)
                 }
                 return Err(InvalidationRationale {
                     message: String::from("invalid asgi type provided"),
@@ -170,7 +170,7 @@ impl<'a> TryInto<ASGIEvent> for AsgiDict<'a> {
             Err(_) => {
                 #[cfg(debug_assertions)]
                 {
-                    info!("invalid asgi type provided {:#?}", self)
+                    warn!("invalid asgi type provided {:#?}", self)
                 }
                 return Err(InvalidationRationale {
                     message: String::from("invalid asgi type provided"),
@@ -217,7 +217,7 @@ impl<'a> TryInto<ASGIResponse> for AsgiDict<'a> {
             Err(_) => {
                 #[cfg(debug_assertions)]
                 {
-                    info!("invalid asgi type provided {:#?}", self)
+                    warn!("invalid asgi type provided {:#?}", self)
                 }
                 return Err(InvalidationRationale {
                     message: String::from("invalid asgi type provided"),
@@ -236,7 +236,7 @@ impl<'a> TryInto<ASGIResponse> for AsgiDict<'a> {
             if _body.is_none() {
                 #[cfg(debug_assertions)]
                 {
-                    info!("no body provided")
+                    warn!("no body provided")
                 }
                 return Err(InvalidationRationale {
                     message: String::from(r#"No body provided for "http.response.body" type"#),

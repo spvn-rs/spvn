@@ -42,10 +42,7 @@ pub fn resolve_import(py: Python, import_str: &str) -> anyhow::Result<caller::Ca
     let pkgstr = String::from(pkg);
     let sp: Vec<&str> = pkgstr.split(".").collect();
 
-    #[cfg(debug_assertions)]
-    {
-        println!("found package {:#?}", sp);
-    }
+    debug!("found package {:#?}", sp);
 
     let found = fs::canonicalize(&PathBuf::from(sp[0]));
     let resolved: PathBuf;
@@ -58,7 +55,7 @@ pub fn resolve_import(py: Python, import_str: &str) -> anyhow::Result<caller::Ca
     }
     #[cfg(debug_assertions)]
     {
-        println!("resolved {:?}", resolved.to_str());
+        debug!("resolved {:?}", resolved.to_str());
     }
     #[cfg(debug_assertions)]
     {

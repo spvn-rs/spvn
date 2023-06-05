@@ -1,14 +1,13 @@
 use crate::service::lifespan::{LifeSpan, LifeSpanError, LifeSpanState};
 
-
 use pyo3::exceptions::*;
 use pyo3::ffi::Py_None;
 use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use spvn_serde::{
-    asgi_scope::ASGIEvent,
-    event_receiver::PyASyncEventReceiver, event_sender::EventSender, ASGIType,
+    asgi_scope::ASGIEvent, event_receiver::PyASyncEventReceiver, event_sender::EventSender,
+    ASGIType,
 };
 use std::{
     cmp::max,
@@ -21,7 +20,9 @@ use std::{
     time::Duration,
 };
 use tracing::debug;
-use tracing::{info};
+use tracing::field::debug;
+use tracing::info;
+use tracing::warn;
 
 use std::marker::PhantomData;
 
@@ -84,12 +85,10 @@ impl Caller {
             s.spawn(move || {
                 while let Ok(rec) = rx.recv() {
                     let r = tx_cb.send(Some(rec));
-                    info!("{:#?}", r);
+                    debug!("{:#?}", r);
                 }
                 let send = tx_cb.send(None);
-                info!("{:#?}", send);
-
-                info!("send complete");
+                debug!("{:#?}", send);
             });
             s.spawn(|| {
                 let send = EventSender::new(tx);
@@ -113,7 +112,7 @@ impl Caller {
                         return 
                     }
                 };
-                info!("await obj {:#?}", hasawait);
+                debug!("await obj {:#?}", hasawait);
                 let mut iterable = match hasawait.call_method0(py, "__next__"){
                     Ok(iterable) => iterable ,
                     Err(_e) => {
@@ -130,7 +129,7 @@ impl Caller {
                             iterable = iter;
                         }
                         Err(e) => {
-                            info!("err received in lifespan {:#?}", e);
+                            warn!("err received in lifespan {:#?}", e);
                             break;
                         }
                     }
@@ -139,8 +138,7 @@ impl Caller {
             });
 
             let rec: Option<ASGIEvent> = rx_cb.recv().unwrap();
-            info!("{:#?}", rec);
-            info!("rec complete");
+            debug!("receiver complete {:#?}", rec);
         });
         Ok(())
     }
@@ -182,7 +180,7 @@ fn process_async(
     py: Python,
     awaitable: PyObject,
 ) -> Result<(Option<PyObject>, Option<&PyException>), PyErr> {
-    info!("async call");
+    debug!("async call");
     // coroutine = fut.__await__()
     let res = awaitable.call(py, (), None);
 
@@ -201,7 +199,7 @@ fn process_async(
     loop {
         match await_result.call0(py) {
             Ok(o) => {
-                info!("actual yield, might need to break early");
+                debug!("actual yield, might need to break early");
                 py_result = Some(Ok(o));
                 break;
             }
@@ -213,7 +211,7 @@ fn process_async(
     }
 
     #[cfg(debug_assertions)]
-    info!("py_result {:#?}", py_result,);
+    debug!("py_result {:#?}", py_result,);
 
     let none: PyObject;
     unsafe {
@@ -223,18 +221,18 @@ fn process_async(
     match res_safe {
         Ok(result) => {
             #[cfg(debug_assertions)]
-            info!("result is ok {:#?}", result);
+            debug!("result is ok {:#?}", result);
 
             let o = result.downcast::<PyStopIteration>(py);
             let asyncok = match o {
                 Ok(o) => o,
                 Err(e) => {
-                    info!("{} {}", e.to_string(), result.to_string());
+                    debug!("{} {}", e.to_string(), result.to_string());
                     let o = result.downcast::<PyException>(py);
-                    info!("cast into exception {:#?}", o);
+                    debug!("cast into exception {:#?}", o);
                     match o {
                         Ok(err) => {
-                            eprintln!("an exception was uncaught at runtime{:#?}", err);
+                            warn!("an exception was uncaught at runtime {:#?}", err);
                             return Err(err.into());
                         }
                         Err(ohno) => panic!("{:#?}", ohno),
@@ -243,20 +241,20 @@ fn process_async(
             };
 
             #[cfg(debug_assertions)]
-            info!("{}", asyncok);
+            debug!("is async {}", asyncok);
 
             // let err: Result<PyStopAsyncIteration, PyErr> = result.to_object(py).convert(py);
             // PyStopAsyncIteration::from(result.to_object(py));
             let _value = result.getattr(py, "value");
-            info!("result is ok {:#?}", result);
+            debug!("result is ok {:#?}", result);
 
             Ok((Some(result), None))
         } // if result has value, stop iteration is not called
         Err(e) => {
-            info!("ERR E {:#?}", e);
+            debug!("ERR E {:#?}", e);
             let v = e.value(py).to_object(py);
             // stop iteration
-            info!("ERR E {:#?}", v);
+            debug!("ERR E {:#?}", v);
             Ok((Some(v), None)) // PyNone can be returned so we unwrap
         }
     }
@@ -282,7 +280,7 @@ where
                 match asyncres {
                     Ok((result, exception)) => {
                         if exception.is_some() {
-                            eprintln!("{:#?}", exception);
+                            warn!("exception occured awaiting {:#?}", exception);
                             // return Result::Err("oh no");
                         }
                         Ok(result.unwrap())
@@ -292,33 +290,32 @@ where
             }
             Err(_e) => Ok(awa),
         };
-        #[cfg(debug_assertions)]
-        info!("post await {:#?}", hasawait);
+        debug!("post await {:#?}", hasawait);
         let _obj = match hasawait {
-            Ok(obj) => info!("{:#?}", obj),
+            Ok(obj) => debug!("{:#?}", obj),
             Err(obj) => return Err(obj.into()),
         };
         anyhow::Ok(())
     }
 }
 
-struct CallState<T>
-where
-    T: IntoPy<Py<PyTuple>>,
-{
-    caller: Arc<SyncSafeCaller>,
-    args: Mutex<T>,
-    calling: bool,
-    result: Option<anyhow::Result<()>>,
-    waker: Option<core::task::Waker>,
-}
+// struct CallState<T>
+// where
+//     T: IntoPy<Py<PyTuple>>,
+// {
+//     caller: Arc<SyncSafeCaller>,
+//     args: Mutex<T>,
+//     calling: bool,
+//     result: Option<anyhow::Result<()>>,
+//     waker: Option<core::task::Waker>,
+// }
 
-struct CallerFuture<T>
-where
-    T: IntoPy<Py<PyTuple>>,
-{
-    state: Arc<Mutex<CallState<T>>>,
-}
+// struct CallerFuture<T>
+// where
+//     T: IntoPy<Py<PyTuple>>,
+// {
+//     state: Arc<Mutex<CallState<T>>>,
+// }
 
 // impl<T> Future for CallerFuture<T>
 // where
@@ -338,42 +335,42 @@ where
 //     }
 // }
 
-impl<T> CallerFuture<T>
-where
-    T: IntoPy<Py<PyTuple>>,
-{
-    /// Create a new `TimerFuture` which will complete after the provided
-    /// timeout.
-    pub fn new(caller: Arc<SyncSafeCaller>, base: T) -> Self {
-        let shared = Arc::new(Mutex::new(CallState {
-            caller: caller.clone(),
-            calling: true,
-            result: None,
-            waker: None,
-            args: Mutex::new(base),
-        }));
-        let state = shared.clone();
-        let _join_caller = std::thread::spawn(|| {
-            // let mut st = state.lock().unwrap();
-            // let args: std::sync::MutexGuard<T> = st.args.lock().unwrap();
+// impl<T> CallerFuture<T>
+// where
+//     T: IntoPy<Py<PyTuple>>,
+// {
+//     /// Create a new `TimerFuture` which will complete after the provided
+//     /// timeout.
+//     pub fn new(caller: Arc<SyncSafeCaller>, base: T) -> Self {
+//         let shared = Arc::new(Mutex::new(CallState {
+//             caller: caller.clone(),
+//             calling: true,
+//             result: None,
+//             waker: None,
+//             args: Mutex::new(base),
+//         }));
+//         let state = shared.clone();
+//         let _join_caller = std::thread::spawn(|| {
+//             // let mut st = state.lock().unwrap();
+//             // let args: std::sync::MutexGuard<T> = st.args.lock().unwrap();
 
-            // let res = Python::with_gil(|py| st.caller.call(py, args.into()));
-            // st.calling = false;
-            // if let Some(waker) = st.waker.take() {
-            //     waker.wake()
-            // };
-        });
-        // std::thread::spawn(|| {
-        //     let mut st = state.lock().unwrap();
-        //     let res = Python::with_gil(|py| py.allow_threads(|| st.caller.call(py, base.as_ref())));
-        //     st.calling = false;
-        //     if let Some(waker) = st.waker.take() {
-        //         waker.wake()
-        //     };
-        // });
-        Self { state }
-    }
-}
+//             // let res = Python::with_gil(|py| st.caller.call(py, args.into()));
+//             // st.calling = false;
+//             // if let Some(waker) = st.waker.take() {
+//             //     waker.wake()
+//             // };
+//         });
+//         // std::thread::spawn(|| {
+//         //     let mut st = state.lock().unwrap();
+//         //     let res = Python::with_gil(|py| py.allow_threads(|| st.caller.call(py, base.as_ref())));
+//         //     st.calling = false;
+//         //     if let Some(waker) = st.waker.take() {
+//         //         waker.wake()
+//         //     };
+//         // });
+//         Self { state }
+//     }
+// }
 
 #[derive(Clone, Copy)]
 pub struct SyncSafeCaller {

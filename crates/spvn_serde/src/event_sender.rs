@@ -1,11 +1,9 @@
-
-
 use crate::{asgi_scope::ASGIEvent, AsgiDict, InvalidationRationale};
 use crossbeam::channel;
 use pyo3::{
     exceptions::PyRuntimeError, prelude::*, pyclass::IterNextOutput, types::PyDict, Python,
 };
-use tracing::info;
+use tracing::{debug, info};
 
 #[pyclass]
 pub struct EventSender {
@@ -43,7 +41,7 @@ impl EventSender {
             Err(e) => {
                 #[cfg(debug_assertions)]
                 {
-                    info!("invalid {:#?}", e.message)
+                    debug!("invalid {:#?}", e.message)
                 };
                 return Err(e);
             }
@@ -51,7 +49,7 @@ impl EventSender {
 
         #[cfg(debug_assertions)]
         {
-            info!("python sent {:#?}", received)
+            debug!("python sent {:#?}", received)
         };
         slf.received = Some(received);
         slf.sending = true;
@@ -65,7 +63,7 @@ impl EventSender {
             match res {
                 Ok(_) => Ok(slf),
                 Err(e) => {
-                    info!("{:#?}", e);
+                    debug!("{:#?}", e);
                     Err(PyRuntimeError::new_err("an error occured sending the data"))
                 }
             }
@@ -78,7 +76,7 @@ impl EventSender {
         mut slf: PyRefMut<'a, Self>,
         py: Python,
     ) -> IterNextOutput<PyRefMut<'a, Self>, PyObject> {
-        info!("next");
+        debug!("next");
         slf.sending = false;
         slf.received = None;
         pyo3::pyclass::IterNextOutput::Return(py.None())

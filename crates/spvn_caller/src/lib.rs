@@ -2,11 +2,11 @@ pub mod service;
 use colored::Colorize;
 use std::env;
 
-use crate::service::{imports::resolve_import};
+use crate::service::imports::resolve_import;
 use async_trait::async_trait;
 use deadpool::managed;
 use pyo3::prelude::*;
-use tracing::{debug};
+use tracing::debug;
 
 use service::caller::SyncSafeCaller;
 
@@ -82,7 +82,7 @@ mod tests {
     use spvn_dev::init_test_hooks;
     use spvn_serde::asgi_scope::ASGIScope;
     use std::env;
-    use tracing::info;
+    use tracing::{debug, info};
 
     fn common_init_foo() {
         init_test_hooks();
@@ -151,7 +151,7 @@ mod tests {
             //     kwargs
             // });
             let end = std::time::Instant::now();
-            info!("call time: {:#?}", end.duration_since(st))
+            debug!("call time: {:#?}", end.duration_since(st))
         })
         .join();
     }

@@ -2,7 +2,7 @@ use bytes::Bytes;
 use pyo3::prelude::*;
 use pyo3::prelude::{pyclass, pymethods};
 use pyo3::Python;
-use tracing::info;
+use tracing::{debug, info};
 
 use pyo3::pyclass::IterNextOutput;
 
@@ -27,7 +27,7 @@ pub struct PyAsyncBodyReceiver {
 impl PyAsyncBodyReceiver {
     /// Start the polling loop, ref back to self
     fn __await__(slf: PyRef<'_, Self>) -> Result<PyRef<'_, Self>, PyErr> {
-        info!("await");
+        debug!("await");
         Ok(slf)
     }
 

@@ -6,7 +6,7 @@ use tokio::sync::{
     mpsc,
     mpsc::{Receiver, Sender},
 };
-use tracing::info;
+use tracing::{debug, info, warn};
 
 pub struct CallSoon {
     fu: fn(Python),
@@ -34,12 +34,14 @@ impl CallRunner {
         #[cfg(debug_assertions)]
         info!("watching for tasks");
         while let Some(message) = self.rx.recv().await {
-            #[cfg(debug_assertions)]
-            info!("message {:#?}", message.sched_time);
+            debug!("message {:#?}", message.sched_time);
             Python::with_gil(|py| (message.fu)(py));
         }
         #[cfg(debug_assertions)]
-        info!("oh no done watching");
+        warn!(
+            "{}",
+            "tasks completed. the program is shutting down".green()
+        );
     }
 }
 

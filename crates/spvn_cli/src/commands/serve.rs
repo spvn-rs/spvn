@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 
 use notify::event;
 use notify::Watcher;
-use tracing::{debug, info};
+use tracing::debug;
 
 use tokio::runtime::Builder;
 
@@ -40,8 +40,8 @@ pub struct ServeArgs {
     pub watch: Option<bool>,
 
     // verbose procedures
-    #[arg(short, long, env = "SPVN_VERBOSE_PROC")]
-    pub verbose: bool,
+    #[arg(short, long, env = "SPVN_VERBOSE_PROC", action = ArgAction::SetTrue)]
+    pub verbose: Option<bool>,
 
     // path to ssl server certificates
     #[arg(long, env = "SPVN_SSL_CERT_FILE")]
@@ -107,6 +107,7 @@ pub struct Arguments {
     ssl_key_file: Option<PathBuf>,
     n_threads: usize,
     lifespan: bool,
+    quiet: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -132,6 +133,7 @@ impl ServeArgs {
                     1
                 }),
                 lifespan: self.lifespan.unwrap_or(false),
+                quiet: !self.verbose.unwrap_or(true),
             },
             Overrides {},
         )
@@ -170,6 +172,7 @@ impl Into<SpvnCfg> for Arguments {
             bind: self.bind,
             n_threads: self.n_threads,
             lifespan: self.lifespan,
+            quiet: self.quiet,
         }
     }
 }
@@ -213,7 +216,7 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
         );
 
         #[cfg(debug_assertions)]
-        info!("{:#?}", bi)
+        debug!("{:#?}", bi)
     }
     let rt = Builder::new_multi_thread().enable_all().build().unwrap();
     let _result = rt.block_on(async move {

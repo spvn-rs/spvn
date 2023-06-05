@@ -1,11 +1,14 @@
-use crate::handlers::tasks::{Schedule, Scheduler};
+use crate::handlers::{
+    logging::LogService,
+    tasks::{Schedule, Scheduler},
+};
 
-use hyper::server::conn::Http;
-use tracing::info;
+use hyper::{server::conn::Http, Body};
+use tracing::{debug, info};
 
 use spvn_caller::PySpawn;
 
-use futures::executor;
+use futures::{executor, Future};
 use pyo3::Python;
 use tokio_rustls::rustls::ServerConfig;
 
@@ -14,6 +17,7 @@ use spvn_caller::service::lifespan::LifeSpan;
 use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
+use tracing_subscriber::prelude::*;
 
 #[derive(Debug, Clone)]
 pub enum BindMethods {
@@ -48,6 +52,8 @@ pub struct SpvnCfg {
     pub n_threads: usize,
     pub bind: BindArguments,
 
+    pub quiet: bool,
+
     #[cfg(feature = "lifespan")]
     pub lifespan: bool,
 }
@@ -61,6 +67,7 @@ impl Into<Spvn> for SpvnCfg {
     /// must have SPVN_SRV_TARGET env var set
     fn into(self) -> Spvn {
         let scheduler = Arc::new(Scheduler::new());
+
         Spvn {
             cfg: self.clone().to_owned(),
             scheduler,
@@ -73,6 +80,7 @@ async fn loop_tls(
     acceptor: TlsAcceptor,
     bi: Arc<spvn_caller::service::caller::SyncSafeCaller>,
     scheduler: Arc<Scheduler>,
+    quiet: bool,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
         let (stream, peer) = listener.accept().await?;
@@ -80,21 +88,29 @@ async fn loop_tls(
         let bi = bi.clone();
         let scheduler = scheduler.clone();
 
-        let fut = async move {
-            let stream = acceptor.accept(stream).await?;
-            if let Err(err) = Http::new()
-                .serve_connection(
-                    stream,
-                    Box::pin(Bridge::new(bi.clone(), scheduler.clone(), peer)),
-                )
-                .await
-            {
-                println!("Failed to serve connection: {:?}", err);
-            }
+        let base = Bridge::new(bi.clone(), scheduler.clone(), peer);
+        if !quiet {
+            let svc = LogService {
+                target: "bridge",
+                service: Bridge::new(bi.clone(), scheduler.clone(), peer),
+            };
+            let fut = async move {
+                if let Err(err) = Http::new().serve_connection(stream, svc).await {
+                    println!("Failed to serve connection: {:?}", err);
+                }
 
-            Ok(()) as std::io::Result<()>
-        };
-        tokio::spawn(fut);
+                Ok(()) as std::io::Result<()>
+            };
+            tokio::spawn(fut);
+        } else {
+            let fut = async move {
+                if let Err(err) = Http::new().serve_connection(stream, base).await {
+                    println!("Failed to serve connection: {:?}", err);
+                }
+                Ok(()) as std::io::Result<()>
+            };
+            tokio::spawn(fut);
+        }
     }
 }
 
@@ -102,26 +118,36 @@ async fn loop_passthru(
     listener: TcpListener,
     bi: Arc<spvn_caller::service::caller::SyncSafeCaller>,
     scheduler: Arc<Scheduler>,
+    quiet: bool,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
         let (stream, peer) = listener.accept().await?;
         let bi = bi.clone();
         let scheduler = scheduler.clone();
 
-        let fut = async move {
-            if let Err(err) = Http::new()
-                .serve_connection(
-                    stream,
-                    Box::pin(Bridge::new(bi.clone(), scheduler.clone(), peer)),
-                )
-                .await
-            {
-                println!("Failed to serve connection: {:?}", err);
-            }
+        let base = Bridge::new(bi.clone(), scheduler.clone(), peer);
+        if !quiet {
+            let svc = LogService {
+                target: "bridge",
+                service: Bridge::new(bi.clone(), scheduler.clone(), peer),
+            };
+            let fut = async move {
+                if let Err(err) = Http::new().serve_connection(stream, svc).await {
+                    println!("Failed to serve connection: {:?}", err);
+                }
 
-            Ok(()) as std::io::Result<()>
-        };
-        tokio::spawn(fut);
+                Ok(()) as std::io::Result<()>
+            };
+            tokio::spawn(fut);
+        } else {
+            let fut = async move {
+                if let Err(err) = Http::new().serve_connection(stream, base).await {
+                    println!("Failed to serve connection: {:?}", err);
+                }
+                Ok(()) as std::io::Result<()>
+            };
+            tokio::spawn(fut);
+        }
     }
 }
 
@@ -149,17 +175,23 @@ impl Spvn {
         if !self.cfg.tls.is_none() {
             crate::startup::message::startup_message(pid, addr, true);
             let acceptor = TlsAcceptor::from(self.cfg.tls.as_ref().unwrap().clone());
-            loop_tls(listener, acceptor, bi, self.scheduler.clone()).await
+            loop_tls(
+                listener,
+                acceptor,
+                bi,
+                self.scheduler.clone(),
+                self.cfg.quiet,
+            )
+            .await
         } else {
             crate::startup::message::startup_message(pid, addr, false);
-            loop_passthru(listener, bi, self.scheduler.clone()).await
+            loop_passthru(listener, bi, self.scheduler.clone(), self.cfg.quiet).await
         }
     }
 
     /// add a callback to the task scheduler
     pub fn schedule(&mut self, fu: fn(Python)) {
-        #[cfg(debug_assertions)]
-        info!("scheduling");
+        debug!("scheduling");
         executor::block_on(self.scheduler.schedule(fu));
     }
 }

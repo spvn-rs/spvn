@@ -1,12 +1,12 @@
-
-use std::sync::atomic::{AtomicUsize};
+use std::sync::atomic::AtomicUsize;
 
 use std::time::Duration;
 
 use pyo3::prelude::*;
 use pyo3::prelude::{pyclass, pymethods};
 use pyo3::Python;
-use tracing::info;
+use tracing::log::warn;
+use tracing::{debug, info};
 
 use crate::asgi_scope::ASGIEvent;
 use colored::Colorize;
@@ -59,7 +59,7 @@ impl PyASyncEventReceiver {
 impl PyASyncEventReceiver {
     /// Start the polling loop, ref back to self
     fn __await__(slf: PyRefMut<'_, Self>) -> Result<PyRefMut<'_, Self>, PyErr> {
-        info!("await");
+        debug!("await");
         Ok(slf)
     }
 
@@ -76,7 +76,7 @@ impl PyASyncEventReceiver {
     ///    * c: poll again (\_\_next\_\_(self))
     fn __next__(mut slf: PyRefMut<'_, Self>, py: Python) -> IterNextOutput<PyObject, PyObject> {
         if slf.calls.load(std::sync::atomic::Ordering::Acquire) == 1 {
-            info!("next 1");
+            debug!("next 1");
 
             // send lifecycle event to caller
             return IterNextOutput::Return(slf.val.clone().to_object(py));
@@ -93,25 +93,25 @@ impl PyASyncEventReceiver {
             for _event in events.iter() {
                 match slf.signals.receive().unwrap() {
                     Some(Signal::Interrupt) => {
-                        info!(
+                        warn!(
                             "{}",
                             "received SIGINT... sending lifecycle termination".red()
                         );
                     }
                     Some(Signal::Terminate) => {
-                        info!(
+                        warn!(
                             "{}",
                             "received SIGINT... sending lifecycle termination".red()
                         );
                     }
                     Some(Signal::Quit) => {
-                        info!(
+                        warn!(
                             "{}",
                             "received SIGINT... sending lifecycle termination".red()
                         );
                     }
                     Some(sig) => {
-                        info!("{:#?} unknown signal matched", sig)
+                        warn!("{:#?} unknown signal matched", sig)
                     }
                     None => return IterNextOutput::Yield(slf.into_py(py)),
                 }

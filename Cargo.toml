@@ -16,6 +16,7 @@ description = "asgi rust bindings"
 
 [workspace.dependencies]
 ahash = { version = "0.8.3" }
+tracing-core = { version = "0.1.31" }
 bytes = "1"
 bytes-expand = "0.4.12"
 futures = { version = "0.3.28" }

@@ -4,6 +4,7 @@ use std::time::Instant;
 use crossbeam::channel;
 
 use futures::Future;
+use tracing::debug;
 use tracing::info;
 
 use pyo3::exceptions::*;
@@ -52,7 +53,7 @@ pub struct PyFuture {
 impl PyFuture {
     /// Start the polling loop, ref back to self
     fn __await__(slf: PyRef<'_, Self>) -> Result<PyRef<'_, Self>, PyErr> {
-        info!("await");
+        debug!("await");
         Ok(slf)
     }
 

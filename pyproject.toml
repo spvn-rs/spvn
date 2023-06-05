@@ -38,12 +38,12 @@ Documentation = "https://github.com/joshua-auchincloss/spvn#readme"
 Issues = "https://github.com/joshua-auchincloss/spvn/issues"
 Source = "https://github.com/joshua-auchincloss/spvn"
 
-[project.scripts]
-spvn = "spvn:main"
 
 [tool.maturin]
+
+bindings = "bin"
 python-source = "src"
-manifest-path = "crates/spvn_py/Cargo.toml"
+manifest-path = "crates/spvn_cli/Cargo.toml"
 module-name = "spvn"
 strip = true
 exclude = [

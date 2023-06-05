@@ -9,7 +9,7 @@ use colored::Colorize;
 use http::response::Builder;
 use pyo3::prelude::*;
 use spvn_serde::{body_receiver::PyAsyncBodyReceiver, coalesced, state::StateMap, ASGIResponse};
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::handlers::tasks::Scheduler;
 
@@ -87,7 +87,7 @@ impl<'a> SendResponse<'a> {
     }
 }
 
-impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
+impl Service<Request<IncomingBody>> for Bridge {
     type Response = Response<Full<Bytes>>;
     type Error = hyper::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
@@ -148,7 +148,7 @@ impl Service<Request<IncomingBody>> for Pin<Box<Bridge>> {
                         let obj = asgi.to_object(py);
                         caller.call(py, (obj, receiver, sender))
                     });
-                    info!("{:#?}", res);
+                    debug!("{:#?}", res);
                     Ok(())
                 })
                 .await;
