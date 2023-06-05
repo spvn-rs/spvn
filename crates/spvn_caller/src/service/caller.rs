@@ -9,14 +9,10 @@ use spvn_serde::{
     asgi_scope::ASGIEvent, event_receiver::PyASyncEventReceiver, event_sender::EventSender,
     ASGIType,
 };
-use std::alloc::Layout;
-use std::alloc::alloc;
+
+
 use std::{
-    cmp::max,
     future::Future,
-    mem::{align_of, size_of},
-    ops::{Deref, DerefMut},
-    ptr,
     sync::{Arc, Mutex},
     task::Poll,
     time::Duration,
@@ -26,7 +22,7 @@ use tracing::debug;
 
 use tracing::warn;
 
-use std::marker::PhantomData;
+
 
 pub struct CallFuture<'a, T> {
     iterating: bool,

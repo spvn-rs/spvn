@@ -17,10 +17,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   PACKAGE_NAME: spvn
   PYTHON_VERSION: "3.9"
@@ -37,6 +33,11 @@ jobs:
         target:
           - x86_64-unknown-linux-gnu
           - i686-unknown-linux-gnu
+    env:
+      CC: "clang"
+      CFLAGS: "-O2 -fno-plt -flto=thin"
+      LDFLAGS: "-O2 -flto=thin -fuse-ld=lld -Wl,--as-needed"
+      RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=lld"
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -48,7 +49,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: auto
-          args: --release --out dist
+          args: --release --out dist --compatibility manylinux_2_17 -i python${{ env.PYTHON_VERSION }}
       - name: Test wheel
         if: ${{ startsWith(matrix.target, 'x86_64') }}
         run: |
@@ -61,22 +62,23 @@ jobs:
           name: wheels
           path: dist
 
-  linux-cross:
+  linux-gnu:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         platform:
           - target: aarch64-unknown-linux-gnu
             arch: aarch64
+            cflags: '-O2'
           - target: armv7-unknown-linux-gnueabihf
             arch: armv7
+            cflags: '-Os'
           - target: s390x-unknown-linux-gnu
             arch: s390x
+            cflags: '-O2 -march=z10'
           - target: powerpc64le-unknown-linux-gnu
             arch: ppc64le
-          - target: powerpc64-unknown-linux-gnu
-            arch: ppc64
-
+            cflags: '-O2'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -84,6 +86,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
+        env:
+          PYO3_CROSS_LIB_DIR: "/opt/python/cp39-cp39"
+          CFLAGS: "${{ matrix.target.cflags }}"
+          LDFLAGS: "${{ matrix.target.cflags }} -flto -Wl,--as-needed"
         with:
           target: ${{ matrix.platform.target }}
           manylinux: auto
@@ -113,8 +119,12 @@ jobs:
     strategy:
       matrix:
         target:
-          - x86_64-unknown-linux-musl
-          - i686-unknown-linux-musl
+          - target: aarch64-unknown-linux-musl
+            arch: aarch64
+            platform: linux/arm64
+          - target: x86_64-unknown-linux-musl
+            arch: x86_64
+            platform: linux/amd64
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -123,10 +133,15 @@ jobs:
           architecture: x64
       - name: Build wheels
         uses: PyO3/maturin-action@v1
+        env:
+          CC: "gcc"
+          CFLAGS: "-O2 -fno-plt"
+          LDFLAGS: "-O2 -flto -Wl,--as-needed"
+          RUSTFLAGS: "-C target-feature=-crt-static"
         with:
           target: ${{ matrix.target }}
           manylinux: musllinux_1_2
-          args: --release --out dist
+          args: --release --out dist -i python${{ env.PYTHON_VERSION }}
       - name: Test wheel
         if: matrix.target == 'x86_64-unknown-linux-musl'
         uses: addnab/docker-run-action@v3
@@ -151,8 +166,10 @@ jobs:
         platform:
           - target: aarch64-unknown-linux-musl
             arch: aarch64
-          - target: armv7-unknown-linux-musleabihf
+            cflags: '-O2'
+          - target: armv7-unknown-linux-gnueabihf
             arch: armv7
+            cflags: '-Os'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -160,10 +177,15 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Build wheels
         uses: PyO3/maturin-action@v1
+        env: 
+          CC: "gcc"
+          PYO3_CROSS_LIB_DIR: "/opt/python/cp39-cp39"
+          CFLAGS: "${{ matrix.target.cflags }}"
+          LDFLAGS: "${{ matrix.target.cflags }} -flto -Wl,--as-needed"
         with:
           target: ${{ matrix.platform.target }}
           manylinux: musllinux_1_2
-          args: --release --out dist
+          args: --release --out dist -i python${{ env.PYTHON_VERSION }}
           docker-options: ${{ matrix.platform.maturin_docker_options }}
       - uses: uraimo/run-on-arch-action@v2
         name: Test wheel
@@ -294,7 +316,14 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     if: "startsWith(github.ref, 'refs/tags/')"
-    needs: [linux, windows, macos, sdist]
+    needs:
+      - macos
+      - macos-x86_64
+      - windows
+      - linux
+      - linux-gnu
+      - musllinux
+      - musllinux-cross
     steps:
       - uses: actions/download-artifact@v3
         with:
