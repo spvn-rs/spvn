@@ -5,6 +5,7 @@ use anyhow::Result;
 use clap::{ArgAction, Args};
 use colored::Colorize;
 use core::clone::Clone;
+use std::net::SocketAddr;
 
 use notify::event;
 use notify::Watcher;
@@ -21,16 +22,8 @@ use tokio_rustls::rustls::ServerConfig as TlsConfig;
 #[derive(Debug, Args)]
 pub struct ServeArgs {
     // The TCP port to bind to
-    #[arg(conflicts_with = "socket_bind", conflicts_with = "unix_bind")]
-    pub tcp_bind: Option<String>,
-
-    // The UNIX port to bind to
-    #[arg(conflicts_with = "socket_bind", conflicts_with = "tcp_bind")]
-    pub unix_bind: Option<String>,
-
-    // The SOCKET to bind to
-    #[arg(conflicts_with = "unix_bind", conflicts_with = "tcp_bind")]
-    pub socket_bind: Option<String>,
+    #[arg(long)]
+    pub bind: Option<SocketAddr>,
 
     // The target "module.file:attr" to inject wrappings into
     #[arg(short, long, value_name = "FILE")]
@@ -75,26 +68,14 @@ pub struct ServeArgs {
 
 impl From<&ServeArgs> for BindArguments {
     fn from(value: &ServeArgs) -> Self {
-        if value.tcp_bind != None {
-            let bind: String = value.tcp_bind.clone().unwrap();
+        if value.bind.is_some() {
+            let bind = value.bind.unwrap();
             Self {
                 bind,
                 mtd: BindMethods::BindTcp,
             }
-        } else if value.unix_bind != None {
-            let bind: String = value.unix_bind.clone().unwrap();
-            Self {
-                bind,
-                mtd: BindMethods::BindUnix,
-            }
-        } else if value.socket_bind != None {
-            let bind: String = value.socket_bind.clone().unwrap();
-            Self {
-                bind,
-                mtd: BindMethods::BindSocket,
-            }
         } else {
-            let bind: String = String::from("localhost:8000");
+            let bind: SocketAddr = ([127, 0, 0, 1], 8000).into();
             Self {
                 bind,
                 mtd: BindMethods::BindTcp,
@@ -186,6 +167,7 @@ impl Into<SpvnCfg> for Arguments {
 
         SpvnCfg {
             tls,
+            bind: self.bind,
             n_threads: self.n_threads,
             lifespan: self.lifespan,
         }
@@ -226,7 +208,7 @@ pub fn serve(config: &ServeArgs) -> Result<ExitStatus> {
             },
         )?;
         let bi = watcher.watch(
-            std::path::Path::new("CHANGELOG.md"),
+            std::path::Path::new("."),
             notify::RecursiveMode::NonRecursive,
         );
 

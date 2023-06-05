@@ -9,7 +9,7 @@ use hyper::{body::Body as IncomingBody, Request};
 
 use pyo3::types::PyDict;
 use pyo3::ToPyObject;
-use pyo3::{PyAny, Python};
+use pyo3::{Python};
 
 /// This is a special struct we only use to send lifecycle events
 /// to / from the application

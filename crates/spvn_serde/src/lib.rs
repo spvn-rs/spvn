@@ -188,7 +188,7 @@ impl<'a> TryInto<ASGIEvent> for AsgiDict<'a> {
                 Err(_) => (),
             };
         }
-        let mut state: Option<HashMap<String, String>> = None;
+        let state: Option<HashMap<String, String>> = None;
 
         // let _state = self.0.get_item("state");
         // if _state.is_some() {

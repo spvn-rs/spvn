@@ -1,6 +1,6 @@
-use std::sync::Arc;
 
-use crate::{asgi_scope::ASGIEvent, ASGIResponse, AsgiDict, InvalidationRationale};
+
+use crate::{asgi_scope::ASGIEvent, AsgiDict, InvalidationRationale};
 use crossbeam::channel;
 use pyo3::{
     exceptions::PyRuntimeError, prelude::*, pyclass::IterNextOutput, types::PyDict, Python,

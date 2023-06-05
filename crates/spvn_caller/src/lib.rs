@@ -2,11 +2,11 @@ pub mod service;
 use colored::Colorize;
 use std::env;
 
-use crate::service::{imports::resolve_import, lifespan::LifeSpan};
+use crate::service::{imports::resolve_import};
 use async_trait::async_trait;
 use deadpool::managed;
 use pyo3::prelude::*;
-use tracing::{debug, error, info};
+use tracing::{debug};
 
 use service::caller::SyncSafeCaller;
 
@@ -56,7 +56,7 @@ impl PySpawn {
         // Python::with_gil(f)
         // let py = gil.python();
         // let module = ;
-        let mut caller = match module {
+        let caller = match module {
             Ok(asgi_app) => asgi_app,
             Err(_) => {
                 panic!(

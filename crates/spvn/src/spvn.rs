@@ -23,7 +23,7 @@ pub enum BindMethods {
 }
 #[derive(Debug, Clone)]
 pub struct BindArguments {
-    pub bind: String,
+    pub bind: SocketAddr,
     pub mtd: BindMethods,
 }
 
@@ -46,6 +46,7 @@ pub enum HttpScheme {
 pub struct SpvnCfg {
     pub tls: Option<Arc<ServerConfig>>,
     pub n_threads: usize,
+    pub bind: BindArguments,
 
     #[cfg(feature = "lifespan")]
     pub lifespan: bool,
@@ -130,7 +131,7 @@ impl Spvn {
         &mut self,
         pid: usize,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let addr: SocketAddr = ([127, 0, 0, 1], 8000).into();
+        let addr = self.cfg.bind.bind;
         let listener = crate::startup::listen::spawn_so_reuse(addr).await;
         let reffed = PySpawn::gen();
 

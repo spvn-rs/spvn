@@ -1,14 +1,14 @@
 use crate::service::lifespan::{LifeSpan, LifeSpanError, LifeSpanState};
-use bytes::Bytes;
-use crossbeam_utils::thread;
+
+
 use pyo3::exceptions::*;
 use pyo3::ffi::Py_None;
 use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use spvn_serde::{
-    asgi_scope::ASGIEvent, asgi_sender::Sender, body_receiver::PyAsyncBodyReceiver,
-    event_receiver::PyASyncEventReceiver, event_sender::EventSender, ASGIResponse, ASGIType,
+    asgi_scope::ASGIEvent,
+    event_receiver::PyASyncEventReceiver, event_sender::EventSender, ASGIType,
 };
 use std::{
     cmp::max,
@@ -21,7 +21,7 @@ use std::{
     time::Duration,
 };
 use tracing::debug;
-use tracing::{info, warn};
+use tracing::{info};
 
 use std::marker::PhantomData;
 
@@ -74,11 +74,11 @@ impl Caller {
     /// 5. The app then reports `{type: lifespan.startup.complete ...}`
     fn create_lifespan_handler(
         &self,
-        evt: ASGIType,
-        descr: &str,
-        on_fail: LifeSpanError,
+        _evt: ASGIType,
+        _descr: &str,
+        _on_fail: LifeSpanError,
     ) -> Result<(), LifeSpanError> {
-        let scoped = std::thread::scope(|s| {
+        let _scoped = std::thread::scope(|s| {
             let (tx, rx) = crossbeam::channel::bounded::<ASGIEvent>(2);
             let (tx_cb, rx_cb) = crossbeam::channel::bounded::<Option<ASGIEvent>>(2);
             s.spawn(move || {
@@ -96,7 +96,7 @@ impl Caller {
                 let scope = ASGIEvent::from(ASGIType::Lifespan);
                 let receive = PyASyncEventReceiver::new(ASGIEvent::from(ASGIType::Lifespan));
 
-                let res = Python::with_gil(|py| {
+                let _res = Python::with_gil(|py| {
                     let result =
                     self.app
                         .call(py, (scope.to_object(py), receive, send.into_py(py)), None);
@@ -108,7 +108,7 @@ impl Caller {
 
                 let hasawait = match  awa.call_method0(py, intern!(py, "__await__")) {
                     Ok(awaitable) => awaitable,
-                    Err(e)=>{
+                    Err(_e)=>{
                         debug!("the provided lifespan is not asgi3 compliant, remediate this by adding `__await__` to your app");
                         return 
                     }
@@ -116,7 +116,7 @@ impl Caller {
                 info!("await obj {:#?}", hasawait);
                 let mut iterable = match hasawait.call_method0(py, "__next__"){
                     Ok(iterable) => iterable ,
-                    Err(e) => {
+                    Err(_e) => {
                         debug!("the provided lifespan is not asgi3 compliant, the returned coroutine_wrapper is missing __next__ attribute");
                         return 
                     }
@@ -150,7 +150,7 @@ impl LifeSpan for Caller {
     fn wait_anon(&mut self, on_err: LifeSpanError) -> Result<(), LifeSpanError> {
         let rec = self.create_lifespan_handler(ASGIType::Lifespan, "lifecycle", on_err);
         match rec {
-            Ok(rec) => Ok(()),
+            Ok(_rec) => Ok(()),
             Err(s) => Err(s),
         }
     }

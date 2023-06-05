@@ -1,6 +1,6 @@
-use std::ops::Add;
-use std::sync::atomic::{AtomicI64, AtomicUsize};
-use std::sync::Arc;
+
+use std::sync::atomic::{AtomicUsize};
+
 use std::time::Duration;
 
 use pyo3::prelude::*;
@@ -40,7 +40,7 @@ pub struct PyASyncEventReceiver {
 
 impl PyASyncEventReceiver {
     pub fn new(val: ASGIEvent) -> Self {
-        let mut poll = Poll::new().unwrap();
+        let poll = Poll::new().unwrap();
         let mut signals = Signals::new(SignalSet::all()).unwrap();
         poll.registry()
             .register(&mut signals, LIFETIME, Interest::READABLE)
@@ -90,7 +90,7 @@ impl PyASyncEventReceiver {
             return IterNextOutput::Yield(slf.into_py(py));
         };
         {
-            for event in events.iter() {
+            for _event in events.iter() {
                 match slf.signals.receive().unwrap() {
                     Some(Signal::Interrupt) => {
                         info!(
