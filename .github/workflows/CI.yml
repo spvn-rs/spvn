@@ -143,8 +143,9 @@ jobs:
       - uses: PyO3/maturin-action@v1
         env: 
           CC: "gcc"
-          LDFLAGS: "-O2 -flto -Wl,--as-needed"
-          RUSTFLAGS: -L /opt/python/cp${{ matrix.python-version[0] }}-cp${{ matrix.python-version[0] }}
+          CFLAGS: "-O2 -fno-plt"
+          LDFLAGS: "-O2 -flto=thin -fuse-ld=lld -Wl,--as-needed"
+          RUSTFLAGS: "-C linker=gcc -C target-feature=-crt-static -C link-args=-Wl"
         with:
           rust-toolchain: 1.69.0
           maturin-version: v1.0.1
