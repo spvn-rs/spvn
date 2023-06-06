@@ -113,13 +113,6 @@ jobs:
       matrix:
         python-version: [[38, "3.8"], [39, "3.9"], [310, "3.10"], [311, "3.11"]]
 
-    env:
-      CC: "clang"
-      PATH: /github/home/.local/bin:/github/home/.cargo/bin:/opt/python/cp${{ matrix.python-version[0] }}-cp${{ matrix.python-version[0] }}/bin:/opt/rh/gcc-toolset-12/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      CFLAGS: "-O2 -fno-plt -flto=thin"
-      LDFLAGS: "-O2 -flto=thin -fuse-ld=lld -Wl,--as-needed"
-      RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=lld"
-
     steps:
       - uses: actions/checkout@v3
 
@@ -185,6 +178,7 @@ jobs:
       - macos
       - macos-x86_64
       - windows
+      - sdist
     steps:
       - uses: actions/download-artifact@v3
         with:
