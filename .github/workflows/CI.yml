@@ -122,7 +122,7 @@ jobs:
     container: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
       matrix:
-        python-version: [[38, "3.8"], [39, "3.9"], [310, "3.10"], [311, "3.11"]]
+        python-version: [[38, "3.8"], [39, "3.9"], [310, "3.10"], [311, "3.11"], [312, "3.12"]]
     steps:
       - uses: actions/checkout@v2
 
@@ -143,11 +143,13 @@ jobs:
           yum install -y clang-devel
 
       - uses: PyO3/maturin-action@v1
+        env: 
+          RUSTFLAGS: "-C relocation-model=dynamic-no-pic -L native=/opt/python/cp${{ matrix.python-version[0] }}-cp${{ matrix.python-version[0] }}"
         with:
           rust-toolchain: 1.69.0
           maturin-version: v1.0.1
           command: build
-          args: -i python --release --manylinux 2_28
+          args: -i python${{ matrix.python-version[0] }} --release --manylinux 2_28
 
       - uses: actions/upload-artifact@v3
         with:
