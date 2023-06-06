@@ -139,13 +139,11 @@ jobs:
         run: |
           yum install -y epel-release
           yum install -y clang-devel
+          yum install -y python3-devel.x86_64
 
       - uses: PyO3/maturin-action@v1
         env: 
-          CC: "gcc"
-          CFLAGS: "-O2 -fno-plt"
-          LDFLAGS: "-O2 -flto=thin -fuse-ld=lld --as-needed"
-          RUSTFLAGS: "-C linker=gcc -C target-feature=-crt-static"
+          PYO3_PYTHON: "/opt/python/cp${{ matrix.python-version[0] }}-cp${{ matrix.python-version[0] }}/bin"
         with:
           rust-toolchain: 1.69.0
           maturin-version: v1.0.1
