@@ -180,6 +180,7 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     needs:
       - macos
+      - macos-x86_64
       - windows
     steps:
       - uses: actions/download-artifact@v3
