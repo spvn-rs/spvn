@@ -26,34 +26,25 @@ env:
   RUSTUP_MAX_RETRIES: 10
 
 jobs:
-  macos:
+
+  macos-x86_64:
+    strategy: 
+      fail-fast: false
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin
-      - name: Build wheels - x86_64
+          architecture: x64
+      - name: Build Wheels
         uses: PyO3/maturin-action@v1
         with:
-          target: x86_64-apple-darwin
-          args: --release --out dist --sdist
-      - name: Install built wheel - x86_64
-        run: |
-          pip install spvn --no-index --find-links dist --force-reinstall
-          spvn --help
-          python -m spvn --help
-      - name: Build wheels - universal2
-        uses: PyO3/maturin-action@v1
-        with:
-          target: universal2-apple-darwin
+          target: x86_64
           args: --release --out dist
-      - name: Install built wheel - universal2
+      - name: Test Wheels
         run: |
-          pip install spvn --no-index --find-links dist --force-reinstall
+          pip install dist/${{ env.PACKAGE_NAME }}-*.whl --force-reinstall
           spvn --help
           python -m spvn --help
       - name: Upload wheels
@@ -61,46 +52,60 @@ jobs:
         with:
           name: wheels
           path: dist
-      - name: Archive binary
-        run: |
-          cd target/release
-          tar czvf spvn.tar.gz spvn
-          cd -
-      - name: Upload binary to GitHub Release
-        uses: svenstaro/upload-release-action@v2
-        if: "startsWith(github.ref, 'refs/tags/')"
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          asset_name: spvn-apple-darwin.tar.gz
-          file: target/release/spvn.tar.gz
-          tag: ${{ github.ref }}
 
-  windows:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        platform:
-          [
-            { python-architecture: "x64", target: "x86_64-pc-windows-msvc" },
-            { python-architecture: "x86", target: "i686-pc-windows-msvc" },
-          ]
+  macos:
+    strategy: 
+      fail-fast: false
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.6
-          architecture: ${{ matrix.platform.python-architecture }}
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform.target }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist
-      - name: Install built wheel
+          args: --release --target universal2-apple-darwin --out dist
+      - name: Test wheel
         run: |
-          pip install spvn --no-index --find-links dist --force-reinstall
+          pip install dist/${{ env.PACKAGE_NAME }}-*universal2.whl --force-reinstall
+          spvn --help
+          python -m spvn --help
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: dist
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - target: x86_64-pc-windows-msvc
+            arch: x64
+          - target: i686-pc-windows-msvc
+            arch: x86
+          - target: aarch64-pc-windows-msvc
+            arch: x64
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: ${{ matrix.target }}
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter
+      - name: Test Wheel
+        if: ${{ !startsWith(matrix.platform.target, 'aarch64') }}
+        shell: bash
+        run: |
+          python -m pip install dist/${{ env.PACKAGE_NAME }}-*.whl --force-reinstall
           spvn --help
           python -m spvn --help
       - name: Upload wheels
@@ -111,60 +116,40 @@ jobs:
 
   linux:
     runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
       matrix:
-        platform:
-          [
-            { target: "x86_64-unknown-linux-musl", image_tag: "x86_64-musl" },
-            { target: "i686-unknown-linux-musl", image_tag: "i686-musl" },
-            { target: "aarch64-unknown-linux-musl", image_tag: "aarch64-musl" },
-            {
-              target: "armv7-unknown-linux-musleabihf",
-              image_tag: "armv7-musleabihf",
-            },
-            {
-              target: "powerpc64le-unknown-linux-musl",
-              image_tag: "powerpc64le-musl",
-            },
-          ]
-    container:
-      image: docker://messense/rust-musl-cross:${{ matrix.platform.image_tag }}
-      env:
-        CFLAGS_armv7_unknown_linux_musleabihf: "-mfpu=vfpv3-d16"
+        python-version: [[38, "3.8"], [39, "3.9"], [310, "3.10"], [311, "3.11"]]
     steps:
-      - uses: actions/checkout@v3
-      - name: Build Wheels - manylinux
-        uses: PyO3/maturin-action@main
-        with:
-          target: ${{ matrix.platform.target }}
-          manylinux: auto
-          container: off
-          args: --release -o dist
-      - name: Build Wheels - musllinux
-        uses: PyO3/maturin-action@main
-        with:
-          target: ${{ matrix.platform.target }}
-          manylinux: musllinux_1_1
-          container: off
-          args: --release -o dist
-      - name: Upload wheels
-        uses: actions/upload-artifact@v3
-        with:
-          name: wheels
-          path: dist
-      - name: Archive binary
+      - uses: actions/checkout@v2
+
+      - name: Set python version
         run: |
-          cd target/${{ matrix.platform.target }}/release
-          tar czvf spvn.tar.gz spvn
-          cd -
-      - name: Upload binary to GitHub Release
-        uses: svenstaro/upload-release-action@v2
-        if: "startsWith(github.ref, 'refs/tags/')"
+          echo "/opt/python/cp${{ matrix.python-version[0] }}-cp${{ matrix.python-version[0] }}/bin" >> $GITHUB_PATH
+      
+      - uses: actions-rs/toolchain@v1
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          asset_name: spvn-${{ matrix.platform.target }}.tar.gz
-          file: target/${{ matrix.platform.target }}/release/spvn.tar.gz
-          tag: ${{ github.ref }}
+          toolchain: 1.65.0
+          components: rustfmt
+          target: aarch64-unknown-linux-gnu
+          default: true
+
+      - name: Install tools
+        run: |
+          yum install -y epel-release
+          yum install -y clang-devel
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          rust-toolchain: 1.65.0
+          maturin-version: v0.14.15
+          command: build
+          args: -i python --release --manylinux 2_28
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: "ubuntu-latest-${{ matrix.python-version[1] }}"
+          path: target/wheels/*.whl
 
   sdist:
     runs-on: ubuntu-latest
