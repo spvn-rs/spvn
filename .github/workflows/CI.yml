@@ -121,8 +121,9 @@ jobs:
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
+      fail-fast: false
       matrix:
-        python-version: [[38, "3.8"], [39, "3.9"], [310, "3.10"], [311, "3.11"], [312, "3.12"]]
+        python-version: [[38, "3.8"], [39, "3.9"], [310, "3.10"], [311, "3.11"]]
     steps:
       - uses: actions/checkout@v2
 
