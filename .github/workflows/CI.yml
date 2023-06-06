@@ -150,7 +150,7 @@ jobs:
           rust-toolchain: 1.69.0
           maturin-version: v1.0.1
           command: build
-          args: -i python${{ matrix.python-version[0] }} --release --manylinux 2_28
+          args: -i python${{ matrix.python-version[1] }} --release --manylinux 2_28
 
       - uses: actions/upload-artifact@v3
         with:
