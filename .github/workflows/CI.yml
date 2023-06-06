@@ -114,6 +114,9 @@ jobs:
           name: wheels
           path: dist
 
+
+
+
   linux:
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
@@ -141,8 +144,8 @@ jobs:
 
       - uses: PyO3/maturin-action@v1
         with:
-          rust-toolchain: 1.65.0
-          maturin-version: v0.14.15
+          rust-toolchain: 1.69.0
+          maturin-version: v1.0.1
           command: build
           args: -i python --release --manylinux 2_28
 
