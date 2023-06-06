@@ -105,7 +105,7 @@ jobs:
         if: ${{ !startsWith(matrix.platform.target, 'aarch64') }}
         shell: bash
         run: |
-          python -m pip install dist/${{ env.PACKAGE_NAME }}-*.whl --force-reinstall
+          python -m pip install dist/${{ env.PACKAGE_NAME }}*cp310*.whl --force-reinstall
           spvn --help
           python -m spvn --help
       - name: Upload wheels
