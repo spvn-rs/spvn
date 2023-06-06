@@ -144,7 +144,7 @@ jobs:
         env: 
           CC: "gcc"
           CFLAGS: "-O2 -fno-plt"
-          LDFLAGS: "-O2 -flto=thin -fuse-ld=lld -Wl,--as-needed"
+          LDFLAGS: "-O2 -flto=thin -fuse-ld=lld --as-needed"
           RUSTFLAGS: "-C linker=gcc -C target-feature=-crt-static -C link-args=-Wl"
         with:
           rust-toolchain: 1.69.0
