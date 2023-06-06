@@ -28,3 +28,6 @@ colored = { workspace = true}
 notify = { version = "6.0.0" }
 tokio-rustls = "0.24"
 pyo3 = {workspace = true, features = ["abi3"]}
+
+[build-dependencies]
+pyo3-build-config = "0.19.0"

@@ -112,15 +112,16 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [[38, "3.8"], [39, "3.9"], [310, "3.10"], [311, "3.11"]]
+
     env:
-      PATH: /github/home/.local/bin:/github/home/.cargo/bin:/opt/python/cp${{ matrix.python-version[0] }}-cp${{ matrix.python-version[0] }}/bin:/opt/rh/gcc-toolset-12/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       CC: "clang"
+      PATH: /github/home/.local/bin:/github/home/.cargo/bin:/opt/python/cp${{ matrix.python-version[0] }}-cp${{ matrix.python-version[0] }}/bin:/opt/rh/gcc-toolset-12/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       CFLAGS: "-O2 -fno-plt -flto=thin"
       LDFLAGS: "-O2 -flto=thin -fuse-ld=lld -Wl,--as-needed"
       RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=lld"
-      CARGO_UNSTABLE_SPARSE_REGISTRY: "true"
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set python version
         run: |
@@ -137,12 +138,14 @@ jobs:
         run: |
           yum install -y epel-release
           yum install -y clang-devel clang lld
+
       - uses: PyO3/maturin-action@v1
         with:
           rust-toolchain: 1.69.0
           maturin-version: v1.0.1
           command: build
           args: --release --manylinux 2_28 --strip --out=dist --interpreter python${{ matrix.python-version[1] }}
+      
       - uses: actions/upload-artifact@v3
         with:
           name: "ubuntu-latest-${{ matrix.python-version[1] }}"

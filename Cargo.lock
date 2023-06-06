@@ -1146,6 +1146,7 @@ dependencies = [
  "notify",
  "num_cpus",
  "pyo3",
+ "pyo3-build-config",
  "spvn",
  "spvn_caller",
  "spvn_serde",
