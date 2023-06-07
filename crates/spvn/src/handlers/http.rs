@@ -26,7 +26,7 @@ use spvn_serde::state::State;
 
 use std::marker::Send;
 use std::sync::Arc;
-use tokio_util::sync::CancellationToken;
+
 use tower_service::Service;
 type Ra = Result<http::Response<http_body::Full<bytes::Bytes>>, hyper::Error>;
 

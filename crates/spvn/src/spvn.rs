@@ -4,7 +4,7 @@ use crate::handlers::{
 };
 
 use hyper::server::conn::Http;
-use tokio_util::sync::CancellationToken;
+
 use tracing::debug;
 
 use spvn_caller::{service::caller::Caller, PySpawn};

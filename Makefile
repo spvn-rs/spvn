@@ -1,7 +1,7 @@
 test-env:
 		python3.10 -m venv ./env \
 		&& . ./env/bin/activate \
-		&& pip install maturin
+		&& pip install maturin fastapi
 link:
 		maturin develop
 .PHONY: activate
