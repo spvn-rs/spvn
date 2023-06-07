@@ -9,8 +9,8 @@ use http::{uri::Scheme, Uri, Version};
 use hyper::{body::Body as IncomingBody, Request};
 
 use pyo3::types::PyDict;
-use pyo3::Python;
-use pyo3::ToPyObject;
+use pyo3::{IntoPy, Python};
+use pyo3::{Py, PyAny, ToPyObject};
 
 /// This is a special struct we only use to send lifecycle events
 /// to / from the application
@@ -41,7 +41,6 @@ impl ASGIEvent {
     }
 }
 
-// #[pyclass]
 pub struct ASGIScope {
     _type: String,
     asgi: ASGIVersions,
@@ -60,11 +59,11 @@ pub struct ASGIScope {
 }
 
 // as ugly as it is this is faster to serialize than a pyo3 custom class
-impl ASGIScope {
-    pub fn to_object(self, py: Python<'_>) -> pyo3::PyObject {
+impl IntoPy<Py<PyAny>> for ASGIScope {
+    fn into_py(self, py: Python<'_>) -> Py<PyAny> {
         let dict = PyDict::new(py);
         set_dict_item_feedback(py, &dict, "type", self._type);
-        set_dict_item_feedback(py, &dict, "asgi", self.asgi.to_object(py));
+        set_dict_item_feedback(py, &dict, "asgi", self.asgi.into_py(py));
         set_dict_item_feedback(py, &dict, "http_version", self.http_version);
         set_dict_item_feedback(py, &dict, "method", self.method);
         set_dict_item_feedback(py, &dict, "scheme", self.scheme);
@@ -75,8 +74,6 @@ impl ASGIScope {
         set_dict_item_feedback(py, &dict, "headers", self.headers);
         set_dict_item_feedback(py, &dict, "client", self.client);
         set_dict_item_feedback(py, &dict, "server", self.server);
-        // set_dict_item_feedback(py, &dict, "extensions", self.extensions);
-        // set_dict_item_feedback(py, &dict, "subprotocols", self.subprotocols);
         dict.to_object(py)
     }
 }
@@ -140,34 +137,3 @@ pub fn asgi_from_request(
         // subprotocols: Some(vec![String::from("proto1")]),
     }
 }
-
-// impl ASGIScope {
-//     pub fn mock() -> Self {
-//         let bt: u8 = 1;
-//         let vec_bt = &[bt];
-//         let extensions = Some(vec![(
-//             String::from("abd"),
-//             vec![(String::from("ext1"), String::from("ext1v"))],
-//         )]);
-
-//         let subprotocols = Some(vec![String::from("proto1")]);
-//         ASGIScope {
-//             _type: String::from("http"),
-//             asgi: ASGIImpl(),
-//             http_version: String::from("1.1"),
-//             method: String::from("GET"),
-//             scheme: String::from("GET"),
-//             path: String::from("GET"),
-//             raw_path: vec![1, 2, 3],
-//             query_string: vec![1, 2, 3],
-//             root_path: String::from(""),
-//             headers: vec![("", vec_bt)],
-//             client: (String::from("cli"), 1),
-//             server: (String::from("srv"), 1),
-//             extensions: None,
-//             subprotocols: None,
-//             // extensions,
-//             // subprotocols,
-//         }
-//     }
-//

@@ -3,7 +3,6 @@ use std::time::Instant;
 
 use crossbeam::channel;
 
-use futures::Future;
 use tracing::debug;
 
 
