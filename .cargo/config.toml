@@ -1,9 +1,6 @@
 [alias]
-dev = "run --package spvn_dev --bin spvn_dev"
 cli = "run --package spvn_cli --bin spvn"
-
-test-caller = "cargo test --package spvn_calle"
-
+test-caller = "cargo test --package spvn_caller"
 
 
 [target.x86_64-apple-darwin]
@@ -11,7 +8,6 @@ rustflags = [
   "-C", "link-arg=-undefined",
   "-C", "link-arg=dynamic_lookup",
   "-C", "link-args=-Wl,-rpath,/Library/Developer/CommandLineTools/Library/Frameworks",
-
 ]
 
 [target.aarch64-apple-darwin]

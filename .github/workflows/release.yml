@@ -133,6 +133,8 @@ jobs:
           yum install -y clang-devel clang lld
 
       - uses: PyO3/maturin-action@v1
+        env: 
+          RUSTFLAGS: '-C target-cpu=skylake'
         with:
           rust-toolchain: 1.69.0
           maturin-version: v1.0.1
@@ -190,4 +192,4 @@ jobs:
         with:
           command: upload
           verbose: true
-          skip-existing: true
+          args: --skip-existing *

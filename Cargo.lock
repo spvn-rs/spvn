@@ -1080,7 +1080,7 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spvn"
-version = "0.1.1-beta.0"
+version = "0.1.1-beta.1"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1114,7 +1114,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_caller"
-version = "0.1.1-beta.0"
+version = "0.1.1-beta.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1137,7 +1137,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_cli"
-version = "0.1.1-beta.0"
+version = "0.1.1-beta.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1158,7 +1158,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_dev"
-version = "0.1.1-beta.0"
+version = "0.1.1-beta.1"
 dependencies = [
  "colored",
  "tracing",
@@ -1166,7 +1166,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_macros"
-version = "0.1.1-beta.0"
+version = "0.1.1-beta.1"
 dependencies = [
  "colored",
  "crossbeam",
@@ -1181,7 +1181,7 @@ dependencies = [
 
 [[package]]
 name = "spvn_serde"
-version = "0.1.1-beta.0"
+version = "0.1.1-beta.1"
 dependencies = [
  "ahash",
  "bytes",
