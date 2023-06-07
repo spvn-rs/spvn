@@ -102,7 +102,7 @@ impl From<&ServeArgs> for HttpScheme {
 pub struct Arguments {
     bind: BindArguments,
     sec_scheme: SecScheme,
-    http_scheme: HttpScheme,
+    _http_scheme: HttpScheme,
     target: String,
     watch: bool,
     ssl_cert_path: Option<PathBuf>,
@@ -122,7 +122,7 @@ impl ServeArgs {
         (
             Arguments {
                 bind: BindArguments::from(self),
-                http_scheme: HttpScheme::from(self),
+                _http_scheme: HttpScheme::from(self),
                 sec_scheme: SecScheme::from(self),
                 target: self.target.clone(),
                 watch: self.watch.unwrap_or(false),

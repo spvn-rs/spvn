@@ -5,6 +5,8 @@ use bytes::{BufMut, Bytes, BytesMut};
 use http::response::Builder;
 type HeaderInternal<'a> = BTreeMap<String, Vec<&'a Bytes>>;
 
+/// Insets headers from an ASGI response event (application->server), coalescing duplicate values
+/// into a vec to later join if required (HTTP)
 #[inline(always)]
 fn inset_headers<'a>(
     mut headers: HeaderInternal<'a>,
@@ -25,6 +27,10 @@ fn inset_headers<'a>(
     headers
 }
 
+/// Coalesces `Builder` and body `Bytes` from a series of ASGI response events (application->server)
+/// State is a [`BTreeSet`] (ASGIResponse), internalized as `StateMap`.
+/// Builder is a [`Builder`] (hyper)
+/// Is HTTP indicates whether the headers are to be joined and normalized
 pub fn coslesce_from_state<'a>(
     state: &'a StateMap,
     mut builder: Builder,
@@ -48,9 +54,7 @@ pub fn coslesce_from_state<'a>(
                 }
                 headers = inset_headers(headers, asgi);
             }
-            ASGIType::HTTPResponseTrailers => {
-                // builder.
-            }
+            ASGIType::HTTPResponseTrailers => {}
             _ => {}
         }
     }

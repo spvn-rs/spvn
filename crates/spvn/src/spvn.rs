@@ -4,9 +4,10 @@ use crate::handlers::{
 };
 
 use hyper::server::conn::Http;
+use tokio_util::sync::CancellationToken;
 use tracing::debug;
 
-use spvn_caller::{PySpawn, service::caller::Caller};
+use spvn_caller::{service::caller::Caller, PySpawn};
 
 use futures::executor;
 use pyo3::Python;
@@ -82,6 +83,7 @@ async fn loop_tls(
     scheduler: Arc<Scheduler>,
     server: SocketAddr,
     quiet: bool,
+    // token: CancellationToken,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
         let (stream, peer) = listener.accept().await?;
@@ -89,7 +91,13 @@ async fn loop_tls(
         let bi = bi.clone();
         let scheduler = scheduler.clone();
 
-        let service = Bridge::new(bi.clone(), scheduler.clone(), peer, server);
+        let service = Bridge::new(
+            bi.clone(),
+            scheduler.clone(),
+            peer,
+            server,
+            // token.child_token(),
+        );
         if !quiet {
             let svc = LogService {
                 target: "bridge",
@@ -123,13 +131,20 @@ async fn loop_passthru(
     scheduler: Arc<Scheduler>,
     server: SocketAddr,
     quiet: bool,
+    // token: CancellationToken,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
         let (stream, peer) = listener.accept().await?;
         let bi = bi.clone();
         let scheduler = scheduler.clone();
 
-        let service = Bridge::new(bi.clone(), scheduler.clone(), peer, server);
+        let service = Bridge::new(
+            bi.clone(),
+            scheduler.clone(),
+            peer,
+            server,
+            // token.child_token(),
+        );
         if !quiet {
             let svc = LogService {
                 target: "bridge",
@@ -161,22 +176,25 @@ impl Spvn {
         &mut self,
         pid: usize,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // let token = CancellationToken::new();
+
         let addr = self.cfg.bind.bind;
         let listener = crate::startup::listen::spawn_so_reuse(addr).await;
         let reffed = PySpawn::gen();
-
         let bi: Arc<Caller> = Arc::new(reffed);
+
         #[cfg(feature = "lifespan")]
         {
             if self.cfg.lifespan {
                 let ref_ = bi.clone();
                 tokio::spawn(async move {
-                    ref_.wait_startup();
+                    let _ = ref_.wait_startup();
                 });
             }
         }
 
-        if !self.cfg.tls.is_none() {
+        if self.cfg.tls.is_some() {
+            // branch so we add the tls acceptor
             crate::startup::message::startup_message(pid, addr, true);
             let acceptor = TlsAcceptor::from(self.cfg.tls.as_ref().unwrap().clone());
             loop_tls(
@@ -186,11 +204,21 @@ impl Spvn {
                 self.scheduler.clone(),
                 addr,
                 self.cfg.quiet,
+                // token,
             )
             .await
         } else {
+            // no tls
             crate::startup::message::startup_message(pid, addr, false);
-            loop_passthru(listener, bi, self.scheduler.clone(), addr, self.cfg.quiet).await
+            loop_passthru(
+                listener,
+                bi,
+                self.scheduler.clone(),
+                addr,
+                self.cfg.quiet,
+                // token,
+            )
+            .await
         }
     }
 

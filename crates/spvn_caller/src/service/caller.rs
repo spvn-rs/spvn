@@ -10,11 +10,8 @@ use spvn_serde::{
     ASGIType,
 };
 
-
 use std::{
-    future::Future,
     sync::{Arc, Mutex},
-    task::Poll,
     time::Duration,
 };
 use tracing::debug;
@@ -24,20 +21,20 @@ use tracing::warn;
 
 
 
-pub struct CallFuture<'a, T> {
-    iterating: bool,
-    data: Option<&'a T>,
-}
+// pub struct CallFuture<'a, T> {
+//     iterating: bool,
+//     data: Option<&'a T>,
+// }
 
-impl<'a, T> Future for CallFuture<'a, T> {
-    type Output = &'a T;
-    fn poll(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
-        Poll::Ready(self.data.unwrap())
-    }
-}
+// impl<'a, T> Future for CallFuture<'a, T> {
+//     type Output = &'a T;
+//     fn poll(
+//         self: std::pin::Pin<&mut Self>,
+//         _cx: &mut std::task::Context<'_>,
+//     ) -> std::task::Poll<Self::Output> {
+//         Poll::Ready(self.data.unwrap())
+//     }
+// }
 
 pub struct Caller {
     state: Arc<Mutex<LifeSpanState>>,
@@ -149,7 +146,7 @@ impl LifeSpan for Caller {
         }
     }
     fn wait_shutdown(&mut self) -> Result<(), LifeSpanError> {
-        self.state.lock().unwrap().wait_shutdown();
+        let _ = self.state.lock().unwrap().wait_shutdown();
         Ok(())
     }
     fn wait_startup(&self) -> Result<(), LifeSpanError> {

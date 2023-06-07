@@ -23,6 +23,12 @@ pub struct PyAsyncBodyReceiver {
     pub val: Bytes,
 }
 
+impl From<Bytes> for PyAsyncBodyReceiver {
+    fn from(val: Bytes) -> Self {
+        Self { val }
+    }
+}
+
 #[pymethods]
 impl PyAsyncBodyReceiver {
     /// Start the polling loop, ref back to self
